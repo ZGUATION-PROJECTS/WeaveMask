@@ -28,10 +28,12 @@ import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Checkbox
 import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.icon.extended.ChevronForward
 import top.yukonga.miuix.kmp.icon.extended.Ok
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -53,6 +55,7 @@ enum class InstallMethod {
 @Composable
 fun InstallScreen(
     viewModel: InstallViewModel,
+    onNavigateBack: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -78,7 +81,19 @@ fun InstallScreen(
             modifier = modifier,
             topBar = {
                 TopAppBar(
-                    title = context.getString(CoreR.string.install)
+                    title = context.getString(CoreR.string.install),
+                    navigationIcon = {
+                        IconButton(
+                            modifier = Modifier.padding(start = 16.dp),
+                            onClick = onNavigateBack
+                        ) {
+                            Icon(
+                                imageVector = MiuixIcons.Back,
+                                contentDescription = null,
+                                tint = MiuixTheme.colorScheme.onBackground
+                            )
+                        }
+                    }
                 )
             },
             contentWindowInsets = WindowInsets.systemBars.add(WindowInsets.displayCutout).only(WindowInsetsSides.Horizontal),

@@ -27,10 +27,12 @@ import com.topjohnwu.magisk.core.R as CoreR
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.FloatingActionButton
 import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.icon.extended.Folder
 import top.yukonga.miuix.kmp.icon.extended.ListView
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -42,6 +44,7 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 @Composable
 fun LogScreen(
     viewModel: LogViewModel,
+    onNavigateBack: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -71,6 +74,18 @@ fun LogScreen(
                         context.getString(CoreR.string.superuser)
                     } else {
                         context.getString(CoreR.string.logs)
+                    },
+                    navigationIcon = {
+                        IconButton(
+                            modifier = Modifier.padding(start = 16.dp),
+                            onClick = onNavigateBack
+                        ) {
+                            Icon(
+                                imageVector = MiuixIcons.Back,
+                                contentDescription = null,
+                                tint = MiuixTheme.colorScheme.onBackground
+                            )
+                        }
                     },
                     actions = {
                         TextButton(

@@ -45,6 +45,7 @@ import com.topjohnwu.magisk.core.isRunningAsStub
 import com.topjohnwu.magisk.core.ktx.toast
 import com.topjohnwu.magisk.core.tasks.AppMigration
 import com.topjohnwu.magisk.ui.home.HomeViewModel
+import com.topjohnwu.magisk.ui.install.InstallViewModel
 import com.topjohnwu.magisk.ui.log.LogViewModel
 import com.topjohnwu.magisk.ui.module.ModuleViewModel
 import com.topjohnwu.magisk.ui.settings.SettingsViewModel
@@ -90,6 +91,9 @@ class MainActivity : AppCompatActivity(), SplashScreenHost, IActivityExtension, 
 
     /** 日志 ViewModel */
     private val logViewModel: LogViewModel by viewModels { VMFactory }
+
+    /** 安装 ViewModel */
+    private val installViewModel: InstallViewModel by viewModels { VMFactory }
 
     /** 设置 ViewModel */
     private val settingsViewModel: SettingsViewModel by viewModels { VMFactory }
@@ -162,6 +166,7 @@ class MainActivity : AppCompatActivity(), SplashScreenHost, IActivityExtension, 
                 moduleViewModel = moduleViewModel,
                 superuserViewModel = superuserViewModel,
                 logViewModel = logViewModel,
+                installViewModel = installViewModel,
                 settingsViewModel = settingsViewModel,
                 colorMode = colorMode,
                 keyColor = keyColor,

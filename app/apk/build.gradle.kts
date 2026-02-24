@@ -1,6 +1,7 @@
 plugins {
     id("com.android.application")
     kotlin("plugin.parcelize")
+    kotlin("plugin.serialization") version "2.3.10"
     id("com.android.legacy-kapt")
     id("androidx.navigation.safeargs.kotlin")
     id("org.jetbrains.kotlin.plugin.compose") version "2.3.10"
@@ -67,9 +68,15 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.compose.runtime:runtime")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.10.0")
 
     // Navigation Compose
     implementation("androidx.navigation:navigation-compose:2.9.7")
+
+    // Navigation 3 + Miuix NavDisplay
+    implementation("androidx.navigation3:navigation3-runtime:1.1.0-alpha03")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-navigation3:2.10.0")
+    implementation("top.yukonga.miuix.kmp:miuix-navigation3-ui:0.8.3")
 
     // Miuix
     implementation("top.yukonga.miuix.kmp:miuix:0.8.3")

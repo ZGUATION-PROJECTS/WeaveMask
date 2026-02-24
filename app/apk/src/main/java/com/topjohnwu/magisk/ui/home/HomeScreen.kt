@@ -15,7 +15,11 @@ import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
 import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -71,9 +75,11 @@ import com.topjohnwu.magisk.utils.TextHolder
 fun HomeScreen(
     viewModel: HomeViewModel,
     bottomPadding: Dp,
+    onNavigateToInstall: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    var hasStartedLoading by rememberSaveable { mutableStateOf(false) }
     val scrollBehavior = MiuixScrollBehavior()
     val hazeState = remember { HazeState() }
     val hazeStyle = HazeStyle(
@@ -81,9 +87,12 @@ fun HomeScreen(
         tint = HazeTint(MiuixTheme.colorScheme.surface.copy(0.8f))
     )
 
-    // 启动时加载数据
-    LaunchedEffect(Unit) {
-        viewModel.startLoading()
+    // 仅首次进入时触发加载，避免每次返回主页都触发重任务导致转场掉帧
+    LaunchedEffect(hasStartedLoading) {
+        if (!hasStartedLoading) {
+            hasStartedLoading = true
+            viewModel.startLoading()
+        }
     }
 
     Scaffold(
@@ -134,7 +143,7 @@ fun HomeScreen(
                 MagiskCard(
                     magiskState = viewModel.magiskState,
                     installedVersion = viewModel.magiskInstalledVersion.toString(),
-                    onPressed = { viewModel.onMagiskPressed() }
+                    onPressed = onNavigateToInstall
                 )
             }
 
