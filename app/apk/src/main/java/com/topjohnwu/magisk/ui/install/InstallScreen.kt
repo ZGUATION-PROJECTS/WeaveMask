@@ -8,7 +8,7 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -76,91 +76,89 @@ fun InstallScreen(
 
     var selectedMethod by remember { mutableStateOf<InstallMethod?>(null) }
 
-    MiuixTheme {
-        Scaffold(
-            modifier = modifier,
-            topBar = {
-                TopAppBar(
-                    title = context.getString(CoreR.string.install),
-                    navigationIcon = {
-                        IconButton(
-                            modifier = Modifier.padding(start = 16.dp),
-                            onClick = onNavigateBack
-                        ) {
-                            Icon(
-                                imageVector = MiuixIcons.Back,
-                                contentDescription = null,
-                                tint = MiuixTheme.colorScheme.onBackground
-                            )
-                        }
-                    }
-                )
-            },
-            contentWindowInsets = WindowInsets.systemBars.add(WindowInsets.displayCutout).only(WindowInsetsSides.Horizontal),
-            content = { paddingValues ->
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues)
-                        .verticalScroll(rememberScrollState())
-                        .padding(horizontal = 16.dp)
-                ) {
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    if (!skipOptions) {
-                        OptionsCard(
-                            step = step,
-                            keepVerity = keepVerity,
-                            keepEnc = keepEnc,
-                            recovery = recovery,
-                            isSAR = Info.isSAR,
-                            isFDE = Info.isFDE,
-                            hasRamdisk = Info.ramdisk,
-                            onKeepVerityChange = {
-                                keepVerity = !keepVerity
-                                Config.keepVerity = keepVerity
-                            },
-                            onKeepEncChange = {
-                                keepEnc = !keepEnc
-                                Config.keepEnc = keepEnc
-                            },
-                            onRecoveryChange = {
-                                recovery = !recovery
-                                Config.recovery = recovery
-                            },
-                            onNextClick = { viewModel.step = 1 }
+    Scaffold(
+        modifier = modifier,
+        topBar = {
+            TopAppBar(
+                title = context.getString(CoreR.string.install),
+                navigationIcon = {
+                    IconButton(
+                        modifier = Modifier.padding(start = 16.dp),
+                        onClick = onNavigateBack
+                    ) {
+                        Icon(
+                            imageVector = MiuixIcons.Back,
+                            contentDescription = null,
+                            tint = MiuixTheme.colorScheme.onBackground
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
                     }
-
-                    MethodCard(
-                        step = step,
-                        selectedMethod = selectedMethod,
-                        isRooted = isRooted,
-                        noSecondSlot = noSecondSlot,
-                        dataUri = viewModel.data.value,
-                        onMethodChange = { newMethod ->
-                            selectedMethod = newMethod
-                            viewModel.method = when (newMethod) {
-                                InstallMethod.PATCH -> METHOD_PATCH
-                                InstallMethod.DIRECT -> METHOD_DIRECT
-                                InstallMethod.INACTIVE_SLOT -> METHOD_INACTIVE_SLOT
-                                null -> -1
-                            }
-                        },
-                        onInstallClick = { viewModel.install() }
-                    )
-
-                    if (hasNotes) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        NotesCard(notes = notes.toString())
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
                 }
+            )
+        },
+        contentWindowInsets = WindowInsets.systemBars.add(WindowInsets.displayCutout).only(WindowInsetsSides.Horizontal),
+        content = { paddingValues ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp)
+            ) {
+                Spacer(modifier = Modifier.height(8.dp))
+
+                if (!skipOptions) {
+                    OptionsCard(
+                        step = step,
+                        keepVerity = keepVerity,
+                        keepEnc = keepEnc,
+                        recovery = recovery,
+                        isSAR = Info.isSAR,
+                        isFDE = Info.isFDE,
+                        hasRamdisk = Info.ramdisk,
+                        onKeepVerityChange = {
+                            keepVerity = !keepVerity
+                            Config.keepVerity = keepVerity
+                        },
+                        onKeepEncChange = {
+                            keepEnc = !keepEnc
+                            Config.keepEnc = keepEnc
+                        },
+                        onRecoveryChange = {
+                            recovery = !recovery
+                            Config.recovery = recovery
+                        },
+                        onNextClick = { viewModel.step = 1 }
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+
+                MethodCard(
+                    step = step,
+                    selectedMethod = selectedMethod,
+                    isRooted = isRooted,
+                    noSecondSlot = noSecondSlot,
+                    dataUri = viewModel.data.value,
+                    onMethodChange = { newMethod ->
+                        selectedMethod = newMethod
+                        viewModel.method = when (newMethod) {
+                            InstallMethod.PATCH -> METHOD_PATCH
+                            InstallMethod.DIRECT -> METHOD_DIRECT
+                            InstallMethod.INACTIVE_SLOT -> METHOD_INACTIVE_SLOT
+                            null -> -1
+                        }
+                    },
+                    onInstallClick = { viewModel.install() }
+                )
+
+                if (hasNotes) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    NotesCard(notes = notes.toString())
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
             }
-        )
-    }
+        }
+    )
 }
 
 /**
