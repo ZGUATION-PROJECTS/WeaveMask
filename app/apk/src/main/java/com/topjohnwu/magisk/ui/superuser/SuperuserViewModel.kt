@@ -44,7 +44,9 @@ data class SuperuserUiState(
     val showSystemApps: Boolean = true,
     val policies: List<PolicyCardUiState> = emptyList(),
     val errorMessage: String? = null,
-    val revision: Long = 0L
+    val revision: Long = 0L,
+    // 撤销权限对话框状态
+    val revokeDialogState: com.topjohnwu.magisk.dialog.SuperuserRevokeDialog.DialogState = com.topjohnwu.magisk.dialog.SuperuserRevokeDialog.DialogState()
 )
 
 data class PolicyCardUiState(
@@ -255,7 +257,7 @@ class SuperuserViewModel(
     // ---
 
     fun deleteByKey(key: String) {
-        findPolicyByKey(key)?.let(::deletePressed)
+        findPolicyByKey(key)?.let { onRevokePressed(key) }
     }
 
     fun toggleNotifyByKey(key: String) {
@@ -278,24 +280,91 @@ class SuperuserViewModel(
         }
     }
 
-    fun deletePressed(item: PolicyRvItem) {
-        fun updateState() = viewModelScope.launch {
-            db.delete(item.item.uid)
-            allPolicies = allPolicies.filterNot { it.item.uid == item.item.uid }
-            itemsPolicies.update(allPolicies)
-            if (allPolicies.isEmpty() && itemsHelpers.isEmpty()) {
-                itemsHelpers.add(itemNoData)
-            } else if (allPolicies.isNotEmpty()) {
-                itemsHelpers.clear()
+    // ---
+
+    /**
+     * 显示撤销权限确认对话框
+     *
+     * @param key 策略唯一标识
+     */
+    fun showRevokeDialog(key: String) {
+        val item = findPolicyByKey(key) ?: return
+        _uiState.update {
+            it.copy(
+                revokeDialogState = com.topjohnwu.magisk.dialog.SuperuserRevokeDialog.DialogState(
+                    visible = true,
+                    appName = item.appName
+                )
+            )
+        }
+    }
+
+    /**
+     * 关闭撤销权限确认对话框
+     */
+    fun dismissRevokeDialog() {
+        _uiState.update {
+            it.copy(
+                revokeDialogState = it.revokeDialogState.copy(visible = false)
+            )
+        }
+    }
+
+    /**
+     * 确认撤销权限
+     *
+     * @param key 策略唯一标识
+     */
+    fun confirmRevoke(key: String) {
+        dismissRevokeDialog()
+        findPolicyByKey(key)?.let { item ->
+            viewModelScope.launch {
+                db.delete(item.item.uid)
+                allPolicies = allPolicies.filterNot { it.item.uid == item.item.uid }
+                itemsPolicies.update(allPolicies)
+                if (allPolicies.isEmpty() && itemsHelpers.isEmpty()) {
+                    itemsHelpers.add(itemNoData)
+                } else if (allPolicies.isNotEmpty()) {
+                    itemsHelpers.clear()
+                }
+                publishFilteredPolicies()
             }
-            publishFilteredPolicies()
+        }
+    }
+
+    /**
+     * 处理撤销按钮点击（带认证检查）
+     *
+     * @param key 策略唯一标识
+     */
+    fun onRevokePressed(key: String) {
+        val item = findPolicyByKey(key) ?: return
+
+        fun doRevoke() {
+            viewModelScope.launch {
+                db.delete(item.item.uid)
+                allPolicies = allPolicies.filterNot { it.item.uid == item.item.uid }
+                itemsPolicies.update(allPolicies)
+                if (allPolicies.isEmpty() && itemsHelpers.isEmpty()) {
+                    itemsHelpers.add(itemNoData)
+                } else if (allPolicies.isNotEmpty()) {
+                    itemsHelpers.clear()
+                }
+                publishFilteredPolicies()
+            }
         }
 
         if (Config.suAuth) {
-            AuthEvent { updateState() }.publish()
+            AuthEvent { doRevoke() }.publish()
         } else {
-            SuperuserRevokeDialog(item.title) { updateState() }.show()
+            showRevokeDialog(key)
         }
+    }
+
+    @Deprecated("使用 onRevokePressed 替代", ReplaceWith("onRevokePressed"))
+    fun deletePressed(item: PolicyRvItem) {
+        val key = policyKey(item.item.uid, item.packageName)
+        onRevokePressed(key)
     }
 
     fun updateNotify(item: PolicyRvItem) {

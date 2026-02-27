@@ -22,6 +22,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -37,6 +40,7 @@ import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
 import com.topjohnwu.magisk.core.model.su.SuPolicy
+import com.topjohnwu.magisk.dialog.SuperuserRevokeDialog
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.HazeTint
@@ -96,12 +100,38 @@ fun SuperuserScreen(
         tint = HazeTint(MiuixTheme.colorScheme.surface.copy(0.8f))
     )
 
-    LaunchedEffect(hasStartedLoading) {
+    // 撤销对话框状态
+    val revokeDialogState = uiState.revokeDialogState
+    var pendingRevokeKey by rememberSaveable { mutableStateOf<String?>(null) }
+
+    // 监听生命周期，当页面从后台返回前台时刷新数据
+    val lifecycleOwner = LocalLifecycleOwner.current
+    LaunchedEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.refresh()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        // 初始加载
         if (!hasStartedLoading) {
             hasStartedLoading = true
             viewModel.startLoading()
         }
     }
+
+    // 显示撤销权限确认对话框
+    SuperuserRevokeDialog(
+        state = revokeDialogState,
+        context = context,
+        onDismiss = { viewModel.dismissRevokeDialog() },
+        onConfirm = {
+            pendingRevokeKey?.let { key ->
+                viewModel.confirmRevoke(key)
+                pendingRevokeKey = null
+            }
+        }
+    )
 
     MiuixTheme {
         Scaffold(
@@ -212,6 +242,10 @@ fun SuperuserScreen(
                                                 expandedPolicyKeys + key
                                             }
                                         },
+                                        onDelete = { key ->
+                                            pendingRevokeKey = key
+                                            viewModel.onRevokePressed(key)
+                                        },
                                         nestedScrollConnection = scrollBehavior.nestedScrollConnection
                                     )
                                 }
@@ -272,6 +306,7 @@ private fun EmptyContent() {
  * @param policies 策略列表
  * @param viewModel 超级用户 ViewModel
  * @param bottomPadding 底部内边距
+ * @param onDelete 删除回调
  * @param nestedScrollConnection 嵌套滚动连接
  */
 @Composable
@@ -281,6 +316,7 @@ private fun PolicyList(
     bottomPadding: Dp,
     expandedPolicyKeys: List<String>,
     onToggleExpanded: (String) -> Unit,
+    onDelete: (String) -> Unit,
     nestedScrollConnection: NestedScrollConnection
 ) {
     LazyColumn(
@@ -301,7 +337,7 @@ private fun PolicyList(
                 item = policyItem,
                 isExpanded = expandedPolicyKeys.contains(policyKey),
                 onToggleExpanded = { onToggleExpanded(policyKey) },
-                onDelete = { viewModel.deleteByKey(policyKey) },
+                onDelete = { onDelete(policyKey) },
                 onUpdateNotify = { viewModel.toggleNotifyByKey(policyKey) },
                 onUpdateLogging = { viewModel.toggleLogByKey(policyKey) },
                 onUpdatePolicy = { policy -> viewModel.updatePolicyByKey(policyKey, policy) }
@@ -502,19 +538,19 @@ private fun PolicyItem(
                         onClick = onDelete,
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(
-                            color = MiuixTheme.colorScheme.error
+                            color = MiuixTheme.colorScheme.errorContainer
                         )
                     ) {
                         Icon(
                             imageVector = MiuixIcons.Delete,
                             contentDescription = null,
                             modifier = Modifier.size(18.dp),
-                            tint = MiuixTheme.colorScheme.onError
+                            tint = MiuixTheme.colorScheme.onErrorContainer
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
                             text = context.getString(CoreR.string.superuser_toggle_revoke),
-                            color = MiuixTheme.colorScheme.onError
+                            color = MiuixTheme.colorScheme.onErrorContainer
                         )
                     }
                 }
