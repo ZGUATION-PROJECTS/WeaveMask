@@ -277,4 +277,10 @@
     <string name="reboot_apply_change">Reboot to apply changes</string>
     <string name="restore_app_confirmation">This will restore the hidden app back to the original app. Do you really want to do this?</string>
 
+    <!-- Pull to refresh -->
+    <string name="pull_down_to_refresh">Pull down to refresh</string>
+    <string name="release_to_refresh">Release to refresh</string>
+    <string name="refreshing">Refreshing…</string>
+    <string name="refreshed_successfully">Refreshed successfully</string>
+
 </resources>

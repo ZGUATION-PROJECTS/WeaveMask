@@ -237,4 +237,10 @@
     <string name="reboot_apply_change">重新啟動裝置以套用設定變更</string>
     <string name="restore_app_confirmation">這將會還原隱藏的應用程式至原始。請問您確定要執行？</string>
 
+    <!-- Pull to refresh -->
+    <string name="pull_down_to_refresh">下拉刷新</string>
+    <string name="release_to_refresh">釋放刷新</string>
+    <string name="refreshing">刷新中…</string>
+    <string name="refreshed_successfully">刷新成功</string>
+
 </resources>

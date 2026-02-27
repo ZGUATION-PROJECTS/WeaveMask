@@ -255,6 +255,12 @@ fun ModuleScreen(
                             PullToRefresh(
                                 isRefreshing = uiState.isRefreshing,
                                 pullToRefreshState = pullToRefreshState,
+                                refreshTexts = listOf(
+                                    context.getString(CoreR.string.pull_down_to_refresh),
+                                    context.getString(CoreR.string.release_to_refresh),
+                                    context.getString(CoreR.string.refreshing),
+                                    context.getString(CoreR.string.refreshed_successfully)
+                                ),
                                 onRefresh = {
                                     if (!uiState.isRefreshing) {
                                         viewModel.refresh()
