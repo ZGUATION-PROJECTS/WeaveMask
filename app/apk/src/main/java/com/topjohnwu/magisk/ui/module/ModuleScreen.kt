@@ -6,6 +6,9 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.net.toUri
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -14,7 +17,6 @@ import androidx.compose.material3.HorizontalDivider
 import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -31,6 +33,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.layout.Box
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.HazeTint
@@ -65,10 +69,9 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
 
-
 /**
  * 模块列表页面
- * 使用 Compose 实现模块管理界面
+ * 使用纯 Compose 实现，遵循 Miuix 设计哲学
  *
  * @param viewModel 模块 ViewModel
  * @param bottomPadding 底部内边距，用于避免内容被底部导航栏遮挡
@@ -83,7 +86,7 @@ fun ModuleScreen(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState = viewModel.uiState
     var hasStartedLoading by rememberSaveable { mutableStateOf(false) }
     var searchExpanded by rememberSaveable { mutableStateOf(false) }
     val showTopPopup = remember { mutableStateOf(false) }
@@ -269,7 +272,7 @@ fun ModuleScreen(
                                 } else {
                                     ModuleList(
                                         viewModel = viewModel,
-                                        items = uiState.modules,
+                                        modules = uiState.modules,
                                         onInstallPressed = {
                                             localModulePicker.launch(
                                                 arrayOf("application/zip", "application/octet-stream")
@@ -341,13 +344,13 @@ private fun EmptyContent(
  * 使用 LazyColumn 显示所有模块项
  *
  * @param viewModel 模块 ViewModel
- * @param items 模块列表
+ * @param modules 模块列表
  * @param bottomPadding 底部内边距
  */
 @Composable
 private fun ModuleList(
     viewModel: ModuleViewModel,
-    items: List<LocalModuleRvItem>,
+    modules: List<ModuleInfo>,
     onInstallPressed: () -> Unit,
     bottomPadding: Dp
 ) {
@@ -365,22 +368,24 @@ private fun ModuleList(
         }
 
         items(
-            items = items,
-            key = { it.item.id }
-        ) { item ->
+            items = modules,
+            key = { it.id }
+        ) { module ->
             ModuleItem(
-                item = item,
+                module = module,
                 viewModel = viewModel
             )
         }
 
-        // 底部间距 - 使用传入的 bottomPadding 确保最后一个卡片内容可以正常显示
         item {
             Spacer(modifier = Modifier.height(bottomPadding))
         }
     }
 }
 
+/**
+ * 安装模块入口按钮
+ */
 @Composable
 private fun InstallModuleEntryButton(
     onClick: () -> Unit
@@ -404,138 +409,138 @@ private fun InstallModuleEntryButton(
 /**
  * 单个模块项组件
  * 显示模块信息、开关、删除/恢复按钮等
+ * 支持点击卡片展开/收起描述
+ *
+ * @param module 模块信息
+ * @param viewModel 模块 ViewModel
  */
 @Composable
 private fun ModuleItem(
-    item: LocalModuleRvItem,
+    module: ModuleInfo,
     viewModel: ModuleViewModel,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
 
-    val module = item.item
-    val isRemoved = item.isRemoved
-    val isEnabled = item.isEnabled
-    val showUpdate = item.showUpdate
-    val updateReady = item.updateReady
-    val showAction = item.showAction
-    val showNotice = item.showNotice
-    val noticeText = item.noticeText.getText(context.resources).toString()
+    val isSwitchEnabled = !module.removed && !module.showNotice
+    val hasDescription = module.description.isNotEmpty()
+    var expanded by rememberSaveable(module.id) { mutableStateOf(false) }
 
-    val isEnabledState = !isRemoved && isEnabled && !showNotice
-
-    val cardAlpha = if (isEnabledState) 1f else 0.5f
+    val textDecoration = if (module.removed) TextDecoration.LineThrough else null
+    val cardAlpha = if (module.enabled && !module.removed) 1f else 0.5f
 
     Card(
         modifier = modifier
             .fillMaxWidth()
             .alpha(cardAlpha),
-        cornerRadius = 12.dp
+        cornerRadius = 12.dp,
+        insideMargin = PaddingValues(16.dp),
+        onClick = {
+            if (hasDescription) expanded = !expanded
+        }
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.Top
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(end = 4.dp)
             ) {
-                Column(
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(
-                        text = module.name,
-                        style = MiuixTheme.textStyles.body1,
-                        fontWeight = FontWeight.Bold,
-                        color = MiuixTheme.colorScheme.onSurface,
-                        textDecoration = if (isRemoved) TextDecoration.LineThrough else null,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-
-                    Spacer(modifier = Modifier.height(2.dp))
-
-                    Text(
-                        text = "${module.version} by ${module.author}",
-                        style = MiuixTheme.textStyles.body2,
-                        color = MiuixTheme.colorScheme.onSurfaceContainer,
-                        textDecoration = if (isRemoved) TextDecoration.LineThrough else null,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-
-                Switch(
-                    checked = isEnabled,
-                    enabled = isEnabledState,
-                    onCheckedChange = { checked ->
-                        module.enable = checked
-                    }
+                Text(
+                    text = module.name,
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight(550),
+                    color = MiuixTheme.colorScheme.onSurface,
+                    textDecoration = textDecoration,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = "${module.version} by ${module.author}",
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(top = 2.dp),
+                    fontWeight = FontWeight(550),
+                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    textDecoration = textDecoration
                 )
             }
+            Switch(
+                checked = module.enabled,
+                enabled = isSwitchEnabled,
+                onCheckedChange = { checked ->
+                    viewModel.toggleModule(module.id, checked)
+                }
+            )
+        }
 
-            if (module.description.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(8.dp))
-
+        if (hasDescription) {
+            Box(
+                modifier = Modifier
+                    .padding(top = 2.dp)
+                    .animateContentSize(
+                        animationSpec = tween(
+                            durationMillis = 250,
+                            easing = FastOutSlowInEasing
+                        )
+                    )
+            ) {
                 Text(
                     text = module.description,
-                    style = MiuixTheme.textStyles.body2,
-                    color = MiuixTheme.colorScheme.onSurfaceContainer,
-                    textDecoration = if (isRemoved) TextDecoration.LineThrough else null,
-                    maxLines = 5,
-                    overflow = TextOverflow.Ellipsis
+                    fontSize = 14.sp,
+                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    overflow = if (expanded) TextOverflow.Clip else TextOverflow.Ellipsis,
+                    maxLines = if (expanded) Int.MAX_VALUE else 4,
+                    textDecoration = textDecoration
                 )
             }
+        }
 
-            if (showNotice) {
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text = noticeText,
-                    style = MiuixTheme.textStyles.body2,
-                    color = MiuixTheme.colorScheme.error,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            HorizontalDivider(
-                color = MiuixTheme.colorScheme.surfaceContainerHigh,
-                thickness = 1.dp
+        if (module.showNotice) {
+            Text(
+                text = module.noticeText.getText(context.resources).toString(),
+                fontSize = 14.sp,
+                modifier = Modifier.padding(top = 8.dp),
+                color = MiuixTheme.colorScheme.error,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
             )
+        }
 
-            Spacer(modifier = Modifier.height(8.dp))
+        HorizontalDivider(
+            modifier = Modifier.padding(vertical = 8.dp),
+            thickness = 0.5.dp,
+            color = MiuixTheme.colorScheme.outline.copy(alpha = 0.5f)
+        )
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                if (showAction) {
-                    TextButton(
-                        text = context.getString(CoreR.string.module_action),
-                        onClick = { viewModel.runAction(module.id, module.name) },
-                        enabled = isEnabled
-                    )
-                }
-
-                if (showUpdate) {
-                    TextButton(
-                        text = context.getString(CoreR.string.update),
-                        onClick = { viewModel.downloadPressed(module.updateInfo) },
-                        enabled = updateReady
-                    )
-                }
-
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (module.showAction && module.enabled && !module.removed) {
                 TextButton(
-                    text = if (isRemoved) context.getString(CoreR.string.module_state_restore) else context.getString(CoreR.string.module_state_remove),
-                    onClick = { item.delete() },
-                    enabled = !item.isUpdated
+                    text = context.getString(CoreR.string.module_action),
+                    onClick = { viewModel.runAction(module.id, module.name) },
+                    enabled = module.enabled
                 )
             }
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            if (module.showUpdate) {
+                TextButton(
+                    text = context.getString(CoreR.string.update),
+                    onClick = { viewModel.downloadPressed(module.updateInfo) },
+                    enabled = module.updateReady
+                )
+            }
+
+            TextButton(
+                text = if (module.removed) context.getString(CoreR.string.module_state_restore) else context.getString(CoreR.string.module_state_remove),
+                onClick = { viewModel.toggleModuleRemove(module.id) },
+                enabled = !module.updated
+            )
         }
     }
 }

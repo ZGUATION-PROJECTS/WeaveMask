@@ -1,85 +1,85 @@
 package com.topjohnwu.magisk.ui.module
 
 import android.net.Uri
-import androidx.databinding.Bindable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
-import com.topjohnwu.magisk.BR
 import com.topjohnwu.magisk.MainDirections
-import com.topjohnwu.magisk.R
 import com.topjohnwu.magisk.arch.AsyncLoadViewModel
-import com.topjohnwu.magisk.core.Const
 import com.topjohnwu.magisk.core.Info
 import com.topjohnwu.magisk.core.base.ContentResultCallback
 import com.topjohnwu.magisk.core.model.module.LocalModule
 import com.topjohnwu.magisk.core.model.module.OnlineModule
-import com.topjohnwu.magisk.databinding.MergeObservableList
-import com.topjohnwu.magisk.databinding.RvItem
-import com.topjohnwu.magisk.databinding.bindExtra
-import com.topjohnwu.magisk.databinding.diffList
-import com.topjohnwu.magisk.databinding.set
 import com.topjohnwu.magisk.dialog.LocalModuleInstallDialog
 import com.topjohnwu.magisk.dialog.OnlineModuleInstallDialog
 import com.topjohnwu.magisk.events.GetContentEvent
 import com.topjohnwu.magisk.events.SnackbarEvent
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.parcelize.Parcelize
 import com.topjohnwu.magisk.core.R as CoreR
 
+/**
+ * 模块排序模式
+ */
 enum class ModuleSortMode {
     NAME,
     ENABLED_FIRST,
     UPDATE_FIRST
 }
 
+/**
+ * 模块页 UI 状态
+ * 使用 data class 符合 Compose 单向数据流原则
+ */
 data class ModuleUiState(
     val isLoading: Boolean = true,
     val isRefreshing: Boolean = false,
     val query: String = "",
     val sortMode: ModuleSortMode = ModuleSortMode.NAME,
-    val modules: List<LocalModuleRvItem> = emptyList(),
+    val modules: List<ModuleInfo> = emptyList(),
     val errorMessage: String? = null
 )
 
+/**
+ * 模块页 ViewModel
+ * 使用纯 Compose 状态管理，移除 DataBinding
+ */
 class ModuleViewModel : AsyncLoadViewModel() {
-
-    val bottomBarBarrierIds = intArrayOf(R.id.module_update, R.id.module_remove)
-
-    private val itemsInstalled = diffList<LocalModuleRvItem>()
-
-    val items = MergeObservableList<RvItem>()
-    val extraBindings = bindExtra {
-        it.put(BR.viewModel, this)
-    }
 
     val data get() = uri
 
-    @get:Bindable
-    var loading = true
-        private set(value) = set(value, field, { field = it }, BR.loading)
+    var loading by mutableStateOf(true)
+        private set
 
-    private val _uiState = MutableStateFlow(ModuleUiState())
-    val uiState: StateFlow<ModuleUiState> = _uiState.asStateFlow()
+    private val _uiState = mutableStateOf(ModuleUiState())
+    val uiState: ModuleUiState get() = _uiState.value
 
-    private var allModules: List<LocalModuleRvItem> = emptyList()
+    private var allModules: List<ModuleInfo> = emptyList()
 
+    /**
+     * 设置搜索查询
+     */
     fun setQuery(query: String) {
-        _uiState.update { it.copy(query = query) }
+        _uiState.value = _uiState.value.copy(query = query)
         publishFilteredModules()
     }
 
+    /**
+     * 设置排序模式
+     */
     fun setSortMode(sortMode: ModuleSortMode) {
-        _uiState.update { it.copy(sortMode = sortMode) }
+        _uiState.value = _uiState.value.copy(sortMode = sortMode)
         publishFilteredModules()
     }
 
+    /**
+     * 刷新模块列表
+     */
     fun refresh() {
         viewModelScope.launch {
             loadModules(isInitialLoad = false)
@@ -95,27 +95,22 @@ class ModuleViewModel : AsyncLoadViewModel() {
     private suspend fun loadModules(isInitialLoad: Boolean) {
         if (isInitialLoad) {
             loading = true
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
         } else {
-            _uiState.update { it.copy(isRefreshing = true, errorMessage = null) }
+            _uiState.value = _uiState.value.copy(isRefreshing = true, errorMessage = null)
         }
 
         try {
             val moduleLoaded = Info.env.isActive && withContext(Dispatchers.IO) { LocalModule.loaded() }
             val installed = if (moduleLoaded) {
                 withContext(Dispatchers.Default) {
-                    LocalModule.installed().map { LocalModuleRvItem(it) }
+                    LocalModule.installed().map { ModuleInfo.from(it) }
                 }
             } else {
                 emptyList()
             }
 
             allModules = installed
-            itemsInstalled.update(installed)
-            if (moduleLoaded && items.isEmpty()) {
-                items.insertItem(InstallModule)
-                    .insertList(itemsInstalled)
-            }
             publishFilteredModules(errorMessage = null)
 
             if (moduleLoaded) {
@@ -126,31 +121,30 @@ class ModuleViewModel : AsyncLoadViewModel() {
             throw e
         } catch (e: Throwable) {
             allModules = emptyList()
-            itemsInstalled.update(emptyList())
-            _uiState.update {
-                it.copy(
-                    modules = emptyList(),
-                    errorMessage = e.message
-                )
-            }
+            _uiState.value = _uiState.value.copy(
+                modules = emptyList(),
+                errorMessage = e.message
+            )
         } finally {
             loading = false
-            _uiState.update { it.copy(isLoading = false, isRefreshing = false) }
-        }
-    }
-
-    private suspend fun loadInstalled() {
-        withContext(Dispatchers.Default) {
-            val installed = LocalModule.installed().map { LocalModuleRvItem(it) }
-            itemsInstalled.update(installed)
+            _uiState.value = _uiState.value.copy(isLoading = false, isRefreshing = false)
         }
     }
 
     private suspend fun loadUpdateInfo() {
         withContext(Dispatchers.IO) {
-            itemsInstalled.forEach {
-                if (it.item.fetch())
-                    it.fetchedUpdateInfo()
+            allModules.forEach { moduleInfo ->
+                val localModule = LocalModule.installed().find { it.id == moduleInfo.id }
+                localModule?.let {
+                    if (it.fetch()) {
+                        val index = allModules.indexOf(moduleInfo)
+                        if (index >= 0) {
+                            allModules = allModules.toMutableList().apply {
+                                this[index] = ModuleInfo.from(it)
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -162,29 +156,69 @@ class ModuleViewModel : AsyncLoadViewModel() {
             allModules
         } else {
             allModules.filter {
-                it.item.name.contains(query, ignoreCase = true) ||
-                    it.item.id.contains(query, ignoreCase = true) ||
-                    it.item.author.contains(query, ignoreCase = true)
+                it.name.contains(query, ignoreCase = true) ||
+                    it.id.contains(query, ignoreCase = true) ||
+                    it.author.contains(query, ignoreCase = true)
             }
         }
 
         modules = when (state.sortMode) {
-            ModuleSortMode.NAME -> modules.sortedBy { it.item.name.lowercase() }
+            ModuleSortMode.NAME -> modules.sortedBy { it.name.lowercase() }
             ModuleSortMode.ENABLED_FIRST -> modules.sortedWith(
-                compareByDescending<LocalModuleRvItem> { it.isEnabled }
-                    .thenBy { it.item.name.lowercase() }
+                compareByDescending<ModuleInfo> { it.enabled }
+                    .thenBy { it.name.lowercase() }
             )
             ModuleSortMode.UPDATE_FIRST -> modules.sortedWith(
-                compareByDescending<LocalModuleRvItem> { it.showUpdate }
-                    .thenBy { it.item.name.lowercase() }
+                compareByDescending<ModuleInfo> { it.showUpdate }
+                    .thenBy { it.name.lowercase() }
             )
         }
 
-        _uiState.update {
-            it.copy(
-                modules = modules,
-                errorMessage = errorMessage
-            )
+        _uiState.value = _uiState.value.copy(
+            modules = modules,
+            errorMessage = errorMessage
+        )
+    }
+
+    /**
+     * 切换模块启用/禁用状态
+     */
+    fun toggleModule(moduleId: String, enabled: Boolean) {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                val localModule = LocalModule.installed().find { it.id == moduleId }
+                localModule?.let {
+                    it.enable = enabled
+                    val index = allModules.indexOfFirst { m -> m.id == moduleId }
+                    if (index >= 0) {
+                        allModules = allModules.toMutableList().apply {
+                            this[index] = ModuleInfo.from(it)
+                        }
+                    }
+                }
+            }
+            publishFilteredModules()
+        }
+    }
+
+    /**
+     * 切换模块移除/恢复状态
+     */
+    fun toggleModuleRemove(moduleId: String) {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                val localModule = LocalModule.installed().find { it.id == moduleId }
+                localModule?.let {
+                    it.remove = !it.remove
+                    val index = allModules.indexOfFirst { m -> m.id == moduleId }
+                    if (index >= 0) {
+                        allModules = allModules.toMutableList().apply {
+                            this[index] = ModuleInfo.from(it)
+                        }
+                    }
+                }
+            }
+            publishFilteredModules()
         }
     }
 

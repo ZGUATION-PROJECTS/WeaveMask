@@ -75,12 +75,6 @@
         tools:layout="@layout/fragment_install_md2" />
 
     <fragment
-        android:id="@+id/modulesFragment"
-        android:name="com.topjohnwu.magisk.ui.module.ModuleFragment"
-        android:label="ModuleFragment"
-        tools:layout="@layout/fragment_module_md2" />
-
-    <fragment
         android:id="@+id/settingsFragment"
         android:name="com.topjohnwu.magisk.ui.settings.SettingsFragment"
         android:label="SettingsFragment" />
@@ -104,15 +98,6 @@
     <action
         android:id="@+id/action_superuserFragment"
         app:destination="@id/superuserFragment"
-        app:enterAnim="@anim/fragment_enter"
-        app:exitAnim="@anim/fragment_exit"
-        app:popEnterAnim="@anim/fragment_enter_pop"
-        app:popExitAnim="@anim/fragment_exit_pop"
-        app:popUpTo="@id/homeFragment" />
-
-    <action
-        android:id="@+id/action_moduleFragment"
-        app:destination="@id/modulesFragment"
         app:enterAnim="@anim/fragment_enter"
         app:exitAnim="@anim/fragment_exit"
         app:popEnterAnim="@anim/fragment_enter_pop"
