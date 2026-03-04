@@ -109,7 +109,7 @@ fun ModuleScreen(
     ) { uri ->
         uri?.let {
             scope.launch {
-                val copied = runCatching {
+                val result = runCatching {
                     withContext(Dispatchers.IO) {
                         val originalName = context.contentResolver.query(
                             it, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null
@@ -132,12 +132,12 @@ fun ModuleScreen(
                                 source.copyTo(sink)
                             }
                         }
-                        target.toUri()
+                        Pair(target.toUri(), originalName)
                     }
                 }
-                copied
-                    .onSuccess { localUri ->
-                        onInstallModuleFromLocal(localUri)
+                result
+                    .onSuccess { (localUri, displayName) ->
+                        viewModel.requestInstallLocalModule(localUri, displayName)
                     }
                     .onFailure { error ->
                         Toast.makeText(
