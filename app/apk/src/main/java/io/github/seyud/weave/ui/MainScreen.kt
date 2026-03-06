@@ -1,5 +1,6 @@
 package io.github.seyud.weave.ui
 
+import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.EaseInOut
@@ -43,7 +44,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.sp
@@ -464,6 +464,7 @@ private fun MainTabScreen(
     initialMainTab: Int,
     onCurrentTabChanged: (Int) -> Unit,
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     val enableBlur = LocalEnableBlur.current
     val enableFloatingBottomBar = LocalEnableFloatingBottomBar.current
     val enableFloatingBottomBarBlur = LocalEnableFloatingBottomBarBlur.current
@@ -595,9 +596,7 @@ private fun MainTabScreen(
                 )
             }
         },
-        contentWindowInsets = WindowInsets(0)
     ) { paddingValues ->
-        val layoutDirection = LocalLayoutDirection.current
         val bottomPadding = paddingValues.calculateBottomPadding()
 
         HorizontalPager(
@@ -606,11 +605,6 @@ private fun MainTabScreen(
             userScrollEnabled = true, // 支持手势滑动与底部导航栏切换
             modifier = Modifier
                 .fillMaxSize()
-                .padding(
-                    start = paddingValues.calculateStartPadding(layoutDirection),
-                    top = paddingValues.calculateTopPadding(),
-                    end = paddingValues.calculateEndPadding(layoutDirection)
-                )
                 .then(if (enableBlur) Modifier.hazeSource(state = hazeState) else Modifier)
                 .then(
                     if (enableFloatingBottomBar && enableFloatingBottomBarBlur)
@@ -645,6 +639,13 @@ private fun MainTabScreen(
                     },
                     onRunAction = { id, name ->
                         navController.navigate(Screen.Action.createRoute(id, name))
+                    },
+                    onOpenWebUi = { id, name ->
+                        context.startActivity(
+                            Intent(context, io.github.seyud.weave.ui.webui.WebUIActivity::class.java)
+                                .putExtra("id", id)
+                                .putExtra("name", name)
+                        )
                     }
                 )
                 3 -> SettingsScreen(

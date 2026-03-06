@@ -147,6 +147,7 @@ fun HomeScreen(
 
     Scaffold(
         modifier = modifier,
+        contentWindowInsets = WindowInsets.systemBars.add(WindowInsets.displayCutout).only(WindowInsetsSides.Horizontal),
         topBar = {
             TopAppBar(
                 modifier = if (enableBlur) {

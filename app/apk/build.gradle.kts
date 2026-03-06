@@ -82,6 +82,9 @@ dependencies {
     implementation("top.yukonga.miuix.kmp:miuix:0.8.5")
     implementation("top.yukonga.miuix.kmp:miuix-icons:0.8.5")
 
+    // WebKit (WebViewAssetLoader)
+    implementation("androidx.webkit:webkit:1.13.0")
+
     // Haze (Gaussian blur)
     implementation(libs.haze)
 

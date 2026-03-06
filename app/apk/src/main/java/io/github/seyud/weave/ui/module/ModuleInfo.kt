@@ -28,6 +28,7 @@ data class ModuleInfo(
     val isRiru: Boolean,
     val zygiskUnloaded: Boolean,
     val hasAction: Boolean,
+    val hasWebUi: Boolean,
     val outdated: Boolean,
 ) {
     /**
@@ -43,6 +44,12 @@ data class ModuleInfo(
      */
     val showAction: Boolean
         get() = hasAction && !showNotice
+
+    /**
+     * 是否显示 WebUI 按钮
+     */
+    val showWebUi: Boolean
+        get() = hasWebUi && enabled && !removed
 
     /**
      * 警告文本
@@ -87,6 +94,7 @@ data class ModuleInfo(
                 isRiru = localModule.isRiru,
                 zygiskUnloaded = localModule.zygiskUnloaded,
                 hasAction = localModule.hasAction,
+                hasWebUi = localModule.hasWebUi,
                 outdated = localModule.outdated,
             )
         }

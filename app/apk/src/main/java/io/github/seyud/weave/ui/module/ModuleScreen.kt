@@ -74,6 +74,9 @@ import top.yukonga.miuix.kmp.icon.extended.Delete
 import top.yukonga.miuix.kmp.icon.extended.Undo
 import top.yukonga.miuix.kmp.icon.extended.Play
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.utils.PressFeedbackType
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Code
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -96,6 +99,7 @@ fun ModuleScreen(
     bottomPadding: Dp,
     onInstallModuleFromLocal: (Uri) -> Unit,
     onRunAction: (String, String) -> Unit,
+    onOpenWebUi: (String, String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -209,6 +213,7 @@ fun ModuleScreen(
 
         Scaffold(
             modifier = modifier,
+            contentWindowInsets = WindowInsets.systemBars.add(WindowInsets.displayCutout).only(WindowInsetsSides.Horizontal),
             topBar = {
                 // 使用 Box 包裹 TopAppBar 来实现 haze 模糊效果
                 Box {
@@ -348,6 +353,7 @@ fun ModuleScreen(
                                                 arrayOf("application/zip", "application/octet-stream")
                                             )
                                         },
+                                        onOpenWebUi = onOpenWebUi,
                                         bottomPadding = bottomPadding,
                                         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection)
                                     )
@@ -424,6 +430,7 @@ private fun ModuleList(
     viewModel: ModuleViewModel,
     modules: List<ModuleInfo>,
     onInstallPressed: () -> Unit,
+    onOpenWebUi: (String, String) -> Unit,
     bottomPadding: Dp,
     modifier: Modifier = Modifier
 ) {
@@ -446,7 +453,8 @@ private fun ModuleList(
         ) { module ->
             ModuleItem(
                 module = module,
-                viewModel = viewModel
+                viewModel = viewModel,
+                onOpenWebUi = onOpenWebUi
             )
         }
 
@@ -482,15 +490,17 @@ private fun InstallModuleEntryButton(
 /**
  * 单个模块项组件
  * 显示模块信息、开关、删除/恢复按钮等
- * 支持点击卡片展开/收起描述
+ * 支持点击卡片展开/收起描述，有 WebUI 时点击跳转 WebUI
  *
  * @param module 模块信息
  * @param viewModel 模块 ViewModel
+ * @param onOpenWebUi 打开 WebUI 回调
  */
 @Composable
 private fun ModuleItem(
     module: ModuleInfo,
     viewModel: ModuleViewModel,
+    onOpenWebUi: (String, String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -509,8 +519,13 @@ private fun ModuleItem(
             .alpha(cardAlpha),
         cornerRadius = 12.dp,
         insideMargin = PaddingValues(16.dp),
+        pressFeedbackType = PressFeedbackType.Sink,
         onClick = {
-            if (hasDescription) expanded = !expanded
+            if (module.showWebUi) {
+                onOpenWebUi(module.id, module.name)
+            } else if (hasDescription) {
+                expanded = !expanded
+            }
         }
     ) {
         Row(
@@ -590,7 +605,8 @@ private fun ModuleItem(
 
         Row(
             modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             // 操作按钮 - 图标+文字样式
             if (module.showAction && module.enabled && !module.removed) {
@@ -624,6 +640,37 @@ private fun ModuleItem(
                 }
             }
 
+            // WebUI 按钮 - 图标+文字样式
+            if (module.showWebUi) {
+                val webUiBg = MiuixTheme.colorScheme.primaryContainer.copy(alpha = 0.7f)
+                val webUiTint = MiuixTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.9f)
+                IconButton(
+                    minHeight = 32.dp,
+                    minWidth = 32.dp,
+                    onClick = { onOpenWebUi(module.id, module.name) },
+                    backgroundColor = webUiBg,
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        Icon(
+                            modifier = Modifier.size(18.dp),
+                            imageVector = Icons.Rounded.Code,
+                            tint = webUiTint,
+                            contentDescription = context.getString(CoreR.string.module_webui)
+                        )
+                        Text(
+                            text = context.getString(CoreR.string.module_webui),
+                            color = webUiTint,
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 14.sp
+                        )
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.weight(1f))
 
             // 更新按钮 - 图标+文字样式
@@ -631,7 +678,6 @@ private fun ModuleItem(
                 val updateBg = MiuixTheme.colorScheme.tertiaryContainer.copy(alpha = 0.6f)
                 val updateTint = MiuixTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.8f)
                 IconButton(
-                    modifier = Modifier.padding(end = 8.dp),
                     backgroundColor = updateBg,
                     enabled = module.updateReady,
                     minHeight = 32.dp,
