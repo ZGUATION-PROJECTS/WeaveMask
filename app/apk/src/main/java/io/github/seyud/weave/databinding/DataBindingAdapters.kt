@@ -41,7 +41,6 @@ import io.github.seyud.weave.core.di.ServiceLocator
 import io.github.seyud.weave.core.model.su.SuPolicy
 import io.github.seyud.weave.utils.TextHolder
 import com.topjohnwu.superuser.internal.UiThreadHandler
-import com.topjohnwu.widget.IndeterminateCheckBox
 import kotlin.math.roundToInt
 
 @BindingAdapter("gone")
@@ -252,25 +251,6 @@ fun RecyclerView.setSpanCount(count: Int) {
     when (val lama = layoutManager) {
         is GridLayoutManager -> lama.spanCount = count
         is StaggeredGridLayoutManager -> lama.spanCount = count
-    }
-}
-
-@BindingAdapter("state")
-fun setState(view: IndeterminateCheckBox, state: Boolean?) {
-    if (view.state != state)
-        view.state = state
-}
-
-@InverseBindingAdapter(attribute = "state")
-fun getState(view: IndeterminateCheckBox) = view.state
-
-@BindingAdapter("stateAttrChanged")
-fun setListeners(
-    view: IndeterminateCheckBox,
-    attrChange: InverseBindingListener
-) {
-    view.setOnStateChangedListener { _, _ ->
-        attrChange.onChange()
     }
 }
 

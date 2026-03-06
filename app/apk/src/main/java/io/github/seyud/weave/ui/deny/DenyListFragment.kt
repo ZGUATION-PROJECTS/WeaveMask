@@ -1,99 +1,59 @@
 package io.github.seyud.weave.ui.deny
 
 import android.os.Bundle
-import android.view.Menu
-import android.view.MenuInflater
-import android.view.MenuItem
+import android.view.LayoutInflater
 import android.view.View
-import androidx.appcompat.widget.SearchView
-import androidx.core.view.MenuProvider
-import androidx.recyclerview.widget.RecyclerView
-import io.github.seyud.weave.R
-import io.github.seyud.weave.arch.BaseFragment
+import android.view.ViewGroup
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.fragment.app.Fragment
+import androidx.navigation.fragment.findNavController
+import io.github.seyud.weave.arch.AsyncLoadViewModel
+import io.github.seyud.weave.arch.ViewModelHolder
 import io.github.seyud.weave.arch.viewModel
-import io.github.seyud.weave.core.ktx.hideKeyboard
-import io.github.seyud.weave.databinding.FragmentDenyMd2Binding
-import rikka.recyclerview.addEdgeSpacing
-import rikka.recyclerview.addItemSpacing
-import rikka.recyclerview.fixEdgeEffect
+import io.github.seyud.weave.ui.theme.WeaveMagiskTheme
 import io.github.seyud.weave.core.R as CoreR
 
-class DenyListFragment : BaseFragment<FragmentDenyMd2Binding>(), MenuProvider {
+class DenyListFragment : Fragment(), ViewModelHolder {
 
-    override val layoutRes = R.layout.fragment_deny_md2
     override val viewModel by viewModel<DenyListViewModel>()
 
-    private lateinit var searchView: SearchView
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        startObserveLiveData()
+    }
 
     override fun onStart() {
         super.onStart()
         activity?.setTitle(CoreR.string.denylist)
     }
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-
-        binding.appList.addOnScrollListener(object : RecyclerView.OnScrollListener() {
-            override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
-                if (newState != RecyclerView.SCROLL_STATE_IDLE) activity?.hideKeyboard()
-            }
-        })
-
-        binding.appList.apply {
-            addEdgeSpacing(top = R.dimen.l_50, bottom = R.dimen.l1)
-            addItemSpacing(R.dimen.l1, R.dimen.l_50, R.dimen.l1)
-            fixEdgeEffect()
-        }
+    override fun onResume() {
+        super.onResume()
+        (viewModel as? AsyncLoadViewModel)?.startLoading()
     }
 
-    override fun onPreBind(binding: FragmentDenyMd2Binding) = Unit
-
-    override fun onBackPressed(): Boolean {
-        if (searchView.isIconfiedByDefault && !searchView.isIconified) {
-            searchView.isIconified = true
-            return true
-        }
-        return super.onBackPressed()
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        viewModel.onSaveState(outState)
     }
 
-    override fun onCreateMenu(menu: Menu, inflater: MenuInflater) {
-        inflater.inflate(R.menu.menu_deny_md2, menu)
-        searchView = menu.findItem(R.id.action_search).actionView as SearchView
-        searchView.queryHint = searchView.context.getString(CoreR.string.hide_filter_hint)
-        searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
-            override fun onQueryTextSubmit(query: String?): Boolean {
-                viewModel.query = query ?: ""
-                return true
-            }
-
-            override fun onQueryTextChange(newText: String?): Boolean {
-                viewModel.query = newText ?: ""
-                return true
-            }
-        })
-    }
-
-    override fun onMenuItemSelected(item: MenuItem): Boolean {
-        when (item.itemId) {
-            R.id.action_show_system -> {
-                val check = !item.isChecked
-                viewModel.isShowSystem = check
-                item.isChecked = check
-                return true
-            }
-            R.id.action_show_OS -> {
-                val check = !item.isChecked
-                viewModel.isShowOS = check
-                item.isChecked = check
-                return true
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?,
+    ): View {
+        savedInstanceState?.let { viewModel.onRestoreState(it) }
+        return ComposeView(requireContext()).apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+            setContent {
+                WeaveMagiskTheme {
+                    DenyListScreen(
+                        viewModel = viewModel,
+                        onNavigateBack = { findNavController().navigateUp() },
+                    )
+                }
             }
         }
-        return false
-    }
-
-    override fun onPrepareMenu(menu: Menu) {
-        val showSystem = menu.findItem(R.id.action_show_system)
-        val showOS = menu.findItem(R.id.action_show_OS)
-        showOS.isEnabled = showSystem.isChecked
     }
 }

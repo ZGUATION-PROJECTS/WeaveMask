@@ -44,7 +44,6 @@ dependencies {
     implementation(project(":core"))
     coreLibraryDesugaring(libs.jdk.libs)
 
-    implementation(libs.indeterminate.checkbox)
     implementation(libs.rikka.layoutinflater)
     implementation(libs.rikka.insets)
     implementation(libs.rikka.recyclerview)
@@ -76,11 +75,11 @@ dependencies {
     // Navigation 3 + Miuix NavDisplay
     implementation("androidx.navigation3:navigation3-runtime:1.1.0-alpha03")
     implementation("androidx.lifecycle:lifecycle-viewmodel-navigation3:2.10.0")
-    implementation("top.yukonga.miuix.kmp:miuix-navigation3-ui:0.8.5")
+    implementation(libs.miuix.navigation3.ui)
 
     // Miuix
-    implementation("top.yukonga.miuix.kmp:miuix:0.8.5")
-    implementation("top.yukonga.miuix.kmp:miuix-icons:0.8.5")
+    implementation(libs.miuix)
+    implementation(libs.miuix.icons)
 
     // WebKit (WebViewAssetLoader)
     implementation("androidx.webkit:webkit:1.13.0")
