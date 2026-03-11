@@ -106,6 +106,8 @@ import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import io.github.seyud.weave.ui.theme.WeaveMagiskTheme
 
+private val MainTabContentBottomSpacing = 12.dp
+
 /**
  * 主屏幕路由定义
  * 使用 sealed class 定义所有页面路由
@@ -597,7 +599,7 @@ private fun MainTabScreen(
             }
         },
     ) { paddingValues ->
-        val bottomPadding = paddingValues.calculateBottomPadding()
+        val contentBottomPadding = paddingValues.calculateBottomPadding() + MainTabContentBottomSpacing
 
         HorizontalPager(
             state = pagerState,
@@ -615,7 +617,7 @@ private fun MainTabScreen(
             when (page) {
                 0 -> HomeScreen(
                     viewModel = homeViewModel,
-                    bottomPadding = bottomPadding,
+                    contentBottomPadding = contentBottomPadding,
                     onNavigateToInstall = {
                         navController.navigate(Screen.Install.route)
                     },
@@ -627,11 +629,11 @@ private fun MainTabScreen(
                 )
                 1 -> SuperuserScreen(
                     viewModel = superuserViewModel,
-                    bottomPadding = bottomPadding
+                    contentBottomPadding = contentBottomPadding
                 )
                 2 -> ModuleScreen(
                     viewModel = moduleViewModel,
-                    bottomPadding = bottomPadding,
+                    contentBottomPadding = contentBottomPadding,
                     onInstallModuleFromLocal = { uri ->
                         navController.navigate(
                             Screen.Flash.createRoute(Const.Value.FLASH_ZIP, uri)
@@ -650,7 +652,7 @@ private fun MainTabScreen(
                 )
                 3 -> SettingsScreen(
                     viewModel = settingsViewModel,
-                    bottomPadding = bottomPadding,
+                    contentBottomPadding = contentBottomPadding,
                     onNavigateToLog = {
                         navController.navigate(Screen.Log.route)
                     },

@@ -78,6 +78,8 @@ import top.yukonga.miuix.kmp.icon.extended.Undo
 import top.yukonga.miuix.kmp.icon.extended.Play
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.PressFeedbackType
+import top.yukonga.miuix.kmp.utils.overScrollVertical
+import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Code
 import kotlinx.coroutines.Dispatchers
@@ -91,7 +93,7 @@ import java.io.IOException
  * 使用纯 Compose 实现，遵循 Miuix 设计哲学
  *
  * @param viewModel 模块 ViewModel
- * @param bottomPadding 底部内边距，用于避免内容被底部导航栏遮挡
+ * @param contentBottomPadding 主页面内容底部留白
  * @param onInstallModuleFromLocal 本地安装模块回调
  * @param onRunAction 运行模块操作回调
  * @param modifier Modifier
@@ -99,7 +101,7 @@ import java.io.IOException
 @Composable
 fun ModuleScreen(
     viewModel: ModuleViewModel,
-    bottomPadding: Dp,
+     contentBottomPadding: Dp,
     onInstallModuleFromLocal: (Uri) -> Unit,
     onRunAction: (String, String) -> Unit,
     onOpenWebUi: (String, String) -> Unit,
@@ -236,7 +238,7 @@ fun ModuleScreen(
                     onSearchStatusChange = { searchStatus = it },
                     defaultResult = {},
                     resultModifier = Modifier.padding(horizontal = 16.dp),
-                    resultContentPadding = PaddingValues(top = 8.dp, bottom = bottomPadding),
+                    resultContentPadding = PaddingValues(top = 8.dp, bottom = contentBottomPadding),
                 ) {
                     moduleItems(
                         modules = uiState.modules,
@@ -355,7 +357,7 @@ fun ModuleScreen(
                                         top = innerPadding.calculateTopPadding() + boxHeight.value + 6.dp,
                                         start = innerPadding.calculateStartPadding(layoutDirection),
                                         end = innerPadding.calculateEndPadding(layoutDirection),
-                                        bottom = bottomPadding
+                                        bottom = contentBottomPadding
                                     )
                                 )
                             }
@@ -370,7 +372,7 @@ fun ModuleScreen(
                                         top = innerPadding.calculateTopPadding() + boxHeight.value + 6.dp,
                                         start = innerPadding.calculateStartPadding(layoutDirection),
                                         end = innerPadding.calculateEndPadding(layoutDirection),
-                                        bottom = bottomPadding
+                                        bottom = contentBottomPadding
                                     )
                                 )
                             }
@@ -387,7 +389,7 @@ fun ModuleScreen(
                                     },
                                     onOpenWebUi = onOpenWebUi,
                                     topContentPadding = innerPadding.calculateTopPadding() + boxHeight.value + 6.dp,
-                                    bottomPadding = bottomPadding,
+                                    contentBottomPadding = contentBottomPadding,
                                     modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection)
                                 )
                             }
@@ -457,7 +459,7 @@ private fun EmptyContent(
  *
  * @param viewModel 模块 ViewModel
  * @param modules 模块列表
- * @param bottomPadding 底部内边距
+ * @param contentBottomPadding 主页面内容底部留白
  * @param modifier Modifier
  */
 @Composable
@@ -469,16 +471,19 @@ private fun ModuleList(
     onInstallPressed: () -> Unit,
     onOpenWebUi: (String, String) -> Unit,
     topContentPadding: Dp,
-    bottomPadding: Dp,
+    contentBottomPadding: Dp,
     modifier: Modifier = Modifier
 ) {
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
+            .scrollEndHaptic()
+            .overScrollVertical()
             .padding(horizontal = 16.dp)
             .then(if (enableBlur) Modifier.hazeSource(state = hazeState) else Modifier),
-        contentPadding = PaddingValues(top = topContentPadding, bottom = bottomPadding),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        contentPadding = PaddingValues(top = topContentPadding, bottom = contentBottomPadding),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        overscrollEffect = null
     ) {
         item {
             InstallModuleEntryButton(onClick = onInstallPressed)

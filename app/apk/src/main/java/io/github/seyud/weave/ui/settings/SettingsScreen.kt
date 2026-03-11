@@ -107,7 +107,7 @@ import io.github.seyud.weave.core.R as CoreR
  * 使用 Miuix 组件实现符合 MIUI 风格的设置列表界面
  *
  * @param viewModel 设置 ViewModel
- * @param bottomPadding 底部内边距，用于避免内容被底部导航栏遮挡
+ * @param contentBottomPadding 主页面内容底部留白
  * @param onNavigateToLog 导航到日志页面的回调
  * @param onNavigateToAppLanguage 导航到应用语言页面的回调
  * @param onNavigateToDenyListConfig 导航到 DenyList 配置页面的回调
@@ -116,7 +116,7 @@ import io.github.seyud.weave.core.R as CoreR
 @Composable
 fun SettingsScreen(
     viewModel: SettingsViewModel,
-    bottomPadding: Dp,
+    contentBottomPadding: Dp,
     onNavigateToLog: () -> Unit,
     onNavigateToAppLanguage: () -> Unit,
     onNavigateToDenyListConfig: () -> Unit,
@@ -832,7 +832,7 @@ fun SettingsScreen(
 
             // 底部留白
             item {
-                Spacer(Modifier.height(bottomPadding))
+                Spacer(Modifier.height(contentBottomPadding))
             }
         }
     }

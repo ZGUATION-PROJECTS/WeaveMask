@@ -79,13 +79,13 @@ import top.yukonga.miuix.kmp.basic.PopupPositionProvider
  * 显示 Magisk 状态、管理器信息和开发者链接
  *
  * @param viewModel 主页 ViewModel
- * @param bottomPadding 底部内边距，用于避免内容被底部导航栏遮挡
+ * @param contentBottomPadding 主页面内容底部留白
  * @param modifier Modifier
  */
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel,
-    bottomPadding: Dp,
+     contentBottomPadding: Dp,
     onNavigateToInstall: () -> Unit,
     onNavigateToUninstall: () -> Unit,
     modifier: Modifier = Modifier
@@ -265,9 +265,9 @@ fun HomeScreen(
                 )
             }
 
-            // 底部间距 - 使用传入的 bottomPadding 确保最后一个卡片内容可以正常显示，不会被导航栏遮挡
+            // 底部留白 - 统一使用主页面传入的内容留白，确保最后一个卡片与底栏保持一致间距
             item {
-                Spacer(modifier = Modifier.height(bottomPadding))
+                Spacer(modifier = Modifier.height(contentBottomPadding))
             }
         }
     }

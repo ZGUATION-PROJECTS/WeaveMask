@@ -78,6 +78,8 @@ import top.yukonga.miuix.kmp.icon.extended.Delete
 import top.yukonga.miuix.kmp.icon.extended.MoreCircle
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.PressFeedbackType
+import top.yukonga.miuix.kmp.utils.overScrollVertical
+import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 import kotlin.math.roundToInt
 
 /**
@@ -85,13 +87,13 @@ import kotlin.math.roundToInt
  * 使用 Compose 实现超级用户授权管理界面
  *
  * @param viewModel 超级用户 ViewModel
- * @param bottomPadding 底部内边距，用于避免内容被底部导航栏遮挡
+ * @param contentBottomPadding 主页面内容底部留白
  * @param modifier Modifier
  */
 @Composable
 fun SuperuserScreen(
     viewModel: SuperuserViewModel,
-    bottomPadding: Dp,
+    contentBottomPadding: Dp,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -168,7 +170,7 @@ fun SuperuserScreen(
                     onSearchStatusChange = { searchStatus = it },
                     defaultResult = {},
                     resultModifier = Modifier.padding(horizontal = 16.dp),
-                    resultContentPadding = PaddingValues(top = 8.dp, bottom = bottomPadding),
+                    resultContentPadding = PaddingValues(top = 8.dp, bottom = contentBottomPadding),
                 ) {
                     policyItems(
                         policies = uiState.policies,
@@ -274,7 +276,7 @@ fun SuperuserScreen(
                                         top = innerPadding.calculateTopPadding() + boxHeight.value + 6.dp,
                                         start = innerPadding.calculateStartPadding(layoutDirection),
                                         end = innerPadding.calculateEndPadding(layoutDirection),
-                                        bottom = bottomPadding
+                                        bottom = contentBottomPadding
                                     )
                                 )
                             }
@@ -284,7 +286,7 @@ fun SuperuserScreen(
                                         top = innerPadding.calculateTopPadding() + boxHeight.value + 6.dp,
                                         start = innerPadding.calculateStartPadding(layoutDirection),
                                         end = innerPadding.calculateEndPadding(layoutDirection),
-                                        bottom = bottomPadding
+                                        bottom = contentBottomPadding
                                     )
                                 )
                             }
@@ -294,7 +296,7 @@ fun SuperuserScreen(
                                     viewModel = viewModel,
                                     enableBlur = enableBlur,
                                     hazeState = hazeState,
-                                    bottomPadding = bottomPadding,
+                                    contentBottomPadding = contentBottomPadding,
                                     topContentPadding = innerPadding.calculateTopPadding() + boxHeight.value + 6.dp,
                                     expandedPolicyKeys = expandedPolicyKeys,
                                     onToggleExpanded = { key ->
@@ -370,7 +372,7 @@ private fun EmptyContent(
  *
  * @param policies 策略列表
  * @param viewModel 超级用户 ViewModel
- * @param bottomPadding 底部内边距
+ * @param contentBottomPadding 主页面内容底部留白
  * @param onDelete 删除回调
  * @param nestedScrollConnection 嵌套滚动连接
  * @param hazeState Haze 模糊状态
@@ -381,7 +383,7 @@ private fun PolicyList(
     viewModel: SuperuserViewModel,
     enableBlur: Boolean,
     hazeState: HazeState,
-    bottomPadding: Dp,
+    contentBottomPadding: Dp,
     topContentPadding: Dp,
     expandedPolicyKeys: List<String>,
     onToggleExpanded: (String) -> Unit,
@@ -391,11 +393,14 @@ private fun PolicyList(
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
+            .scrollEndHaptic()
+            .overScrollVertical()
             .padding(horizontal = 16.dp)
             .then(if (enableBlur) Modifier.hazeSource(state = hazeState) else Modifier)
             .nestedScroll(nestedScrollConnection),
-        contentPadding = PaddingValues(top = topContentPadding, bottom = bottomPadding),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        contentPadding = PaddingValues(top = topContentPadding, bottom = contentBottomPadding),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        overscrollEffect = null
     ) {
         items(
             items = policies,
