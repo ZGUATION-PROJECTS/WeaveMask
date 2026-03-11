@@ -29,15 +29,6 @@ import timber.log.Timber
 import io.github.seyud.weave.core.R as CoreR
 
 /**
- * 模块排序模式
- */
-enum class ModuleSortMode {
-    NAME,
-    ENABLED_FIRST,
-    UPDATE_FIRST
-}
-
-/**
  * 模块页 UI 状态
  * 使用 data class 符合 Compose 单向数据流原则
  */
@@ -45,7 +36,9 @@ data class ModuleUiState(
     val isLoading: Boolean = true,
     val isRefreshing: Boolean = false,
     val query: String = "",
-    val sortMode: ModuleSortMode = ModuleSortMode.NAME,
+    val sortEnabledFirst: Boolean = false,
+    val sortUpdateFirst: Boolean = false,
+    val sortExecutableFirst: Boolean = false,
     val modules: List<ModuleInfo> = emptyList(),
     val errorMessage: String? = null
 )
@@ -86,11 +79,31 @@ class ModuleViewModel : AsyncLoadViewModel() {
         publishFilteredModules()
     }
 
-    /**
-     * 设置排序模式
-     */
-    fun setSortMode(sortMode: ModuleSortMode) {
-        _uiState.value = _uiState.value.copy(sortMode = sortMode)
+    fun setSortEnabledFirst(enabled: Boolean) {
+        _uiState.value = _uiState.value.copy(sortEnabledFirst = enabled)
+        publishFilteredModules()
+    }
+
+    fun setSortUpdateFirst(enabled: Boolean) {
+        _uiState.value = _uiState.value.copy(sortUpdateFirst = enabled)
+        publishFilteredModules()
+    }
+
+    fun setSortExecutableFirst(enabled: Boolean) {
+        _uiState.value = _uiState.value.copy(sortExecutableFirst = enabled)
+        publishFilteredModules()
+    }
+
+    fun restoreSortOptions(
+        sortEnabledFirst: Boolean,
+        sortUpdateFirst: Boolean,
+        sortExecutableFirst: Boolean,
+    ) {
+        _uiState.value = _uiState.value.copy(
+            sortEnabledFirst = sortEnabledFirst,
+            sortUpdateFirst = sortUpdateFirst,
+            sortExecutableFirst = sortExecutableFirst,
+        )
         publishFilteredModules()
     }
 
@@ -208,23 +221,29 @@ class ModuleViewModel : AsyncLoadViewModel() {
             }
         }
 
-        modules = when (state.sortMode) {
-            ModuleSortMode.NAME -> modules.sortedBy { it.name.lowercase() }
-            ModuleSortMode.ENABLED_FIRST -> modules.sortedWith(
-                compareByDescending<ModuleInfo> { it.enabled }
-                    .thenBy { it.name.lowercase() }
-            )
-            ModuleSortMode.UPDATE_FIRST -> modules.sortedWith(
-                compareByDescending<ModuleInfo> { it.showUpdate }
-                    .thenBy { it.name.lowercase() }
-            )
-        }
+        modules = modules.sortedWith(
+            compareBy<ModuleInfo> {
+                if (state.sortEnabledFirst) !it.enabled else false
+            }.thenBy {
+                if (state.sortUpdateFirst) !it.showUpdate else false
+            }.thenBy {
+                if (state.sortExecutableFirst) it.executablePriority else 0
+            }.thenBy { it.name.lowercase() }
+        )
 
         _uiState.value = _uiState.value.copy(
             modules = modules,
             errorMessage = errorMessage
         )
     }
+
+    private val ModuleInfo.executablePriority: Int
+        get() = when {
+            hasAction && hasWebUi -> 0
+            hasWebUi -> 1
+            hasAction -> 2
+            else -> 3
+        }
 
     /**
      * 切换模块启用/禁用状态

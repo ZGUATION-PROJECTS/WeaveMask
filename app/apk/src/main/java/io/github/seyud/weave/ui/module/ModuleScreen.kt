@@ -1,11 +1,13 @@
 package io.github.seyud.weave.ui.module
 
+import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.net.toUri
+import androidx.core.content.edit
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -109,6 +111,7 @@ fun ModuleScreen(
 ) {
     val context = LocalContext.current
     val uiActivity = context as? MainActivity
+    val prefs = remember(context) { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
     val layoutDirection = LocalLayoutDirection.current
     val scope = rememberCoroutineScope()
     val uiState = viewModel.uiState
@@ -191,6 +194,11 @@ fun ModuleScreen(
     LaunchedEffect(hasStartedLoading) {
         if (!hasStartedLoading) {
             hasStartedLoading = true
+            viewModel.restoreSortOptions(
+                sortEnabledFirst = prefs.getBoolean(MODULE_SORT_ENABLED_FIRST_KEY, false),
+                sortUpdateFirst = prefs.getBoolean(MODULE_SORT_UPDATE_FIRST_KEY, false),
+                sortExecutableFirst = prefs.getBoolean(MODULE_SORT_EXECUTABLE_FIRST_KEY, false),
+            )
             viewModel.startLoading()
         }
     }
@@ -198,6 +206,18 @@ fun ModuleScreen(
     LaunchedEffect(searchStatus.searchText) {
         if (uiState.query != searchStatus.searchText) {
             viewModel.setQuery(searchStatus.searchText)
+        }
+    }
+
+    LaunchedEffect(
+        uiState.sortEnabledFirst,
+        uiState.sortUpdateFirst,
+        uiState.sortExecutableFirst,
+    ) {
+        prefs.edit {
+            putBoolean(MODULE_SORT_ENABLED_FIRST_KEY, uiState.sortEnabledFirst)
+            putBoolean(MODULE_SORT_UPDATE_FIRST_KEY, uiState.sortUpdateFirst)
+            putBoolean(MODULE_SORT_EXECUTABLE_FIRST_KEY, uiState.sortExecutableFirst)
         }
     }
 
@@ -268,32 +288,29 @@ fun ModuleScreen(
                             ) {
                                 ListPopupColumn {
                                     DropdownImpl(
-                                        text = "按名称排序",
-                                        isSelected = uiState.sortMode == ModuleSortMode.NAME,
+                                        text = "已启用优先",
+                                        isSelected = uiState.sortEnabledFirst,
                                         optionSize = 3,
                                         onSelectedIndexChange = {
-                                            viewModel.setSortMode(ModuleSortMode.NAME)
-                                            showTopPopup.value = false
+                                            viewModel.setSortEnabledFirst(!uiState.sortEnabledFirst)
                                         },
                                         index = 0
                                     )
                                     DropdownImpl(
-                                        text = "已启用优先",
-                                        isSelected = uiState.sortMode == ModuleSortMode.ENABLED_FIRST,
+                                        text = "可更新优先",
+                                        isSelected = uiState.sortUpdateFirst,
                                         optionSize = 3,
                                         onSelectedIndexChange = {
-                                            viewModel.setSortMode(ModuleSortMode.ENABLED_FIRST)
-                                            showTopPopup.value = false
+                                            viewModel.setSortUpdateFirst(!uiState.sortUpdateFirst)
                                         },
                                         index = 1
                                     )
                                     DropdownImpl(
-                                        text = "可更新优先",
-                                        isSelected = uiState.sortMode == ModuleSortMode.UPDATE_FIRST,
+                                        text = "可执行优先",
+                                        isSelected = uiState.sortExecutableFirst,
                                         optionSize = 3,
                                         onSelectedIndexChange = {
-                                            viewModel.setSortMode(ModuleSortMode.UPDATE_FIRST)
-                                            showTopPopup.value = false
+                                            viewModel.setSortExecutableFirst(!uiState.sortExecutableFirst)
                                         },
                                         index = 2
                                     )
@@ -400,6 +417,10 @@ fun ModuleScreen(
         )
     }
 }
+
+private const val MODULE_SORT_ENABLED_FIRST_KEY = "module_sort_enabled_first"
+private const val MODULE_SORT_UPDATE_FIRST_KEY = "module_sort_update_first"
+private const val MODULE_SORT_EXECUTABLE_FIRST_KEY = "module_sort_executable_first"
 
 /**
  * 加载状态显示
