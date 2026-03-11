@@ -16,10 +16,13 @@ import io.github.seyud.weave.dialog.LocalModuleInstallDialog
 import io.github.seyud.weave.dialog.OnlineModuleInstallDialog
 import io.github.seyud.weave.events.GetContentEvent
 import io.github.seyud.weave.events.SnackbarEvent
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.withContext
 import kotlinx.parcelize.Parcelize
 import timber.log.Timber
@@ -70,8 +73,10 @@ class ModuleViewModel : AsyncLoadViewModel() {
         private set
 
     private var changelogLoadJob: Job? = null
+    private var updateInfoJob: Job? = null
 
     private var allModules: List<ModuleInfo> = emptyList()
+    private var moduleSnapshotVersion = 0
 
     /**
      * 设置搜索查询
@@ -105,6 +110,8 @@ class ModuleViewModel : AsyncLoadViewModel() {
     override fun onNetworkChanged(network: Boolean) = startLoading()
 
     private suspend fun loadModules(isInitialLoad: Boolean) {
+        updateInfoJob?.cancel()
+
         if (isInitialLoad) {
             loading = true
             _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
@@ -114,20 +121,25 @@ class ModuleViewModel : AsyncLoadViewModel() {
 
         try {
             val moduleLoaded = Info.env.isActive && withContext(Dispatchers.IO) { LocalModule.loaded() }
+            val installedModules = if (moduleLoaded) {
+                withContext(Dispatchers.IO) { LocalModule.installed() }
+            } else {
+                emptyList()
+            }
             val installed = if (moduleLoaded) {
                 withContext(Dispatchers.Default) {
-                    LocalModule.installed().map { ModuleInfo.from(it) }
+                    installedModules.map { ModuleInfo.from(it) }
                 }
             } else {
                 emptyList()
             }
 
             allModules = installed
+            val snapshotVersion = ++moduleSnapshotVersion
             publishFilteredModules(errorMessage = null)
 
             if (moduleLoaded) {
-                loadUpdateInfo()
-                publishFilteredModules(errorMessage = null)
+                startUpdateInfoRefresh(installedModules, snapshotVersion)
             }
         } catch (e: CancellationException) {
             throw e
@@ -143,23 +155,45 @@ class ModuleViewModel : AsyncLoadViewModel() {
         }
     }
 
-    private suspend fun loadUpdateInfo() {
-        withContext(Dispatchers.IO) {
-            allModules.forEach { moduleInfo ->
-                val localModule = LocalModule.installed().find { it.id == moduleInfo.id }
-                localModule?.let {
-                    if (it.fetch()) {
-                        val index = allModules.indexOf(moduleInfo)
-                        if (index >= 0) {
-                            allModules = allModules.toMutableList().apply {
-                                this[index] = ModuleInfo.from(it)
-                            }
-                        }
-                    }
+    private fun startUpdateInfoRefresh(
+        installedModules: List<LocalModule>,
+        snapshotVersion: Int,
+    ) {
+        updateInfoJob = viewModelScope.launch {
+            try {
+                val updates = loadUpdateInfo(installedModules)
+                if (snapshotVersion != moduleSnapshotVersion || updates.isEmpty()) {
+                    return@launch
                 }
+
+                allModules = allModules.map { moduleInfo ->
+                    updates[moduleInfo.id] ?: moduleInfo
+                }
+                publishFilteredModules()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                Timber.w(e, "Failed to refresh module update info")
             }
         }
     }
+
+    private suspend fun loadUpdateInfo(installedModules: List<LocalModule>): Map<String, ModuleInfo> =
+        supervisorScope {
+            installedModules
+                .map { localModule ->
+                    async(Dispatchers.IO) {
+                        if (localModule.fetch()) {
+                            localModule.id to ModuleInfo.from(localModule)
+                        } else {
+                            null
+                        }
+                    }
+                }
+                .awaitAll()
+                .filterNotNull()
+                .toMap()
+        }
 
     private fun publishFilteredModules(errorMessage: String? = _uiState.value.errorMessage) {
         val state = _uiState.value

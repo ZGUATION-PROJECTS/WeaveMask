@@ -535,7 +535,8 @@ private fun MainTabScreen(
                     },
                     backdrop = backdrop,
                     tabsCount = destinations.size,
-                    isBlurEnabled = enableFloatingBottomBarBlur,
+                    isBackdropBlurEnabled = enableBlur,
+                    isLiquidGlassEnabled = enableBlur && enableFloatingBottomBarBlur,
                 ) {
                     destinations.forEachIndexed { index, destination ->
                         FloatingBottomBarItem(
@@ -609,7 +610,7 @@ private fun MainTabScreen(
                 .fillMaxSize()
                 .then(if (enableBlur) Modifier.hazeSource(state = hazeState) else Modifier)
                 .then(
-                    if (enableFloatingBottomBar && enableFloatingBottomBarBlur)
+                    if (enableFloatingBottomBar && enableBlur)
                         Modifier.layerBackdrop(backdrop)
                     else Modifier
                 )

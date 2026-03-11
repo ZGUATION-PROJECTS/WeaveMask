@@ -120,11 +120,29 @@ object Config : PreferenceConfig, DBConfig {
     var themeOrdinal by preference(Key.THEME_ORDINAL, 0)
     var colorMode by preference(Key.COLOR_MODE, 0)
     var keyColor by preference(Key.KEY_COLOR, 0)
-    var enableBlur by preference(Key.ENABLE_BLUR, true)
+    private var enableBlurPrefs by preference(Key.ENABLE_BLUR, true)
     var enableFloatingBottomBar by preference(Key.ENABLE_FLOATING_BOTTOM_BAR, false)
-    var enableFloatingBottomBarBlur by preference(Key.ENABLE_FLOATING_BOTTOM_BAR_BLUR, false)
+    private var enableFloatingBottomBarBlurPrefs by preference(Key.ENABLE_FLOATING_BOTTOM_BAR_BLUR, false)
     var enablePredictiveBack by preference(Key.ENABLE_PREDICTIVE_BACK, false)
     var pageScale by preference(Key.PAGE_SCALE, 1.0f)
+
+    var enableBlur
+        get() = enableBlurPrefs
+        set(value) {
+            enableBlurPrefs = value
+            if (!value && enableFloatingBottomBarBlurPrefs) {
+                enableFloatingBottomBarBlurPrefs = false
+            }
+        }
+
+    var enableFloatingBottomBarBlur
+        get() = enableFloatingBottomBarBlurPrefs
+        set(value) {
+            if (value && !enableBlurPrefs) {
+                enableBlurPrefs = true
+            }
+            enableFloatingBottomBarBlurPrefs = value
+        }
 
     private var checkUpdatePrefs by preference(Key.CHECK_UPDATES, true)
     private var localePrefs by preference(Key.LOCALE, "")

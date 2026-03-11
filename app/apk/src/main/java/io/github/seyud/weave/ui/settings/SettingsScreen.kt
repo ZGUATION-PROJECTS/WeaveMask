@@ -213,6 +213,9 @@ fun SettingsScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     val showScaleDialog = rememberSaveable { mutableStateOf(false) }
+                    var enableBlur by rememberSaveable { mutableStateOf(Config.enableBlur) }
+                    var enableFloatingBottomBar by rememberSaveable { mutableStateOf(Config.enableFloatingBottomBar) }
+                    var enableFloatingBottomBarBlur by rememberSaveable { mutableStateOf(Config.enableFloatingBottomBarBlur) }
 
                     // 主题模式
                     val themeItems = listOf(
@@ -308,7 +311,6 @@ fun SettingsScreen(
 
                     // 模糊
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        var enableBlur by rememberSaveable { mutableStateOf(Config.enableBlur) }
                         SuperSwitch(
                             title = stringResource(CoreR.string.settings_enable_blur),
                             summary = stringResource(CoreR.string.settings_enable_blur_summary),
@@ -323,13 +325,13 @@ fun SettingsScreen(
                             checked = enableBlur,
                             onCheckedChange = {
                                 Config.enableBlur = it
-                                enableBlur = it
+                                enableBlur = Config.enableBlur
+                                enableFloatingBottomBarBlur = Config.enableFloatingBottomBarBlur
                             }
                         )
                     }
 
                     // 悬浮底栏
-                    var enableFloatingBottomBar by rememberSaveable { mutableStateOf(Config.enableFloatingBottomBar) }
                     SuperSwitch(
                         title = stringResource(CoreR.string.settings_floating_bottom_bar),
                         summary = stringResource(CoreR.string.settings_floating_bottom_bar_summary),
@@ -352,7 +354,6 @@ fun SettingsScreen(
                     AnimatedVisibility(
                         visible = enableFloatingBottomBar && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
                     ) {
-                        var enableFloatingBottomBarBlur by rememberSaveable { mutableStateOf(Config.enableFloatingBottomBarBlur) }
                         SuperSwitch(
                             title = stringResource(CoreR.string.settings_enable_glass),
                             summary = stringResource(CoreR.string.settings_enable_glass_summary),
@@ -367,7 +368,8 @@ fun SettingsScreen(
                             checked = enableFloatingBottomBarBlur,
                             onCheckedChange = {
                                 Config.enableFloatingBottomBarBlur = it
-                                enableFloatingBottomBarBlur = it
+                                enableFloatingBottomBarBlur = Config.enableFloatingBottomBarBlur
+                                enableBlur = Config.enableBlur
                             }
                         )
                     }

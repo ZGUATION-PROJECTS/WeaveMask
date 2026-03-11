@@ -106,12 +106,13 @@ fun FloatingBottomBar(
     onSelected: (index: Int) -> Unit,
     backdrop: Backdrop,
     tabsCount: Int,
-    isBlurEnabled: Boolean = true,
+    isBackdropBlurEnabled: Boolean = true,
+    isLiquidGlassEnabled: Boolean = true,
     content: @Composable RowScope.() -> Unit
 ) {
     val isInLightTheme = !isSystemInDarkTheme()
     val accentColor = MiuixTheme.colorScheme.primary
-    val containerColor = if (isBlurEnabled) {
+    val containerColor = if (isBackdropBlurEnabled) {
         MiuixTheme.colorScheme.surfaceContainer.copy(0.4f)
     } else {
         MiuixTheme.colorScheme.surfaceContainer
@@ -236,14 +237,16 @@ fun FloatingBottomBar(
                     backdrop = backdrop,
                     shape = { ContinuousCapsule },
                     effects = {
-                        if (isBlurEnabled) {
-                            vibrancy()
+                        if (isBackdropBlurEnabled) {
                             blur(8f.dp.toPx())
+                        }
+                        if (isLiquidGlassEnabled) {
+                            vibrancy()
                             lens(24f.dp.toPx(), 24f.dp.toPx())
                         }
                     },
                     highlight = {
-                        Highlight.Default.copy(alpha = if (isBlurEnabled) 1f else 0f)
+                        Highlight.Default.copy(alpha = if (isLiquidGlassEnabled) 1f else 0f)
                     },
                     shadow = {
                         Shadow.Default.copy(
@@ -251,7 +254,7 @@ fun FloatingBottomBar(
                         )
                     },
                     layerBlock = {
-                        if (isBlurEnabled) {
+                        if (isLiquidGlassEnabled) {
                             val progress = dampedDragAnimation.pressProgress
                             val scale = lerp(1f, 1f + 16f.dp.toPx() / size.width, progress)
                             scaleX = scale
@@ -260,7 +263,7 @@ fun FloatingBottomBar(
                     },
                     onDrawSurface = { drawRect(containerColor) }
                 )
-                .then(if (isBlurEnabled) interactiveHighlight.modifier else Modifier)
+                .then(if (isLiquidGlassEnabled) interactiveHighlight.modifier else Modifier)
                 .height(64.dp)
                 .padding(4.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -269,7 +272,7 @@ fun FloatingBottomBar(
 
         CompositionLocalProvider(
             LocalFloatingBottomBarTabScale provides {
-                if (isBlurEnabled) lerp(1f, 1.2f, dampedDragAnimation.pressProgress)
+                if (isLiquidGlassEnabled) lerp(1f, 1.2f, dampedDragAnimation.pressProgress)
                 else 1f
             }
         ) {
@@ -283,19 +286,21 @@ fun FloatingBottomBar(
                         backdrop = backdrop,
                         shape = { ContinuousCapsule },
                         effects = {
-                            if (isBlurEnabled) {
+                            if (isBackdropBlurEnabled) {
+                                blur(8f.dp.toPx())
+                            }
+                            if (isLiquidGlassEnabled) {
                                 val progress = dampedDragAnimation.pressProgress
                                 vibrancy()
-                                blur(8f.dp.toPx())
                                 lens(24f.dp.toPx() * progress, 24f.dp.toPx() * progress)
                             }
                         },
                         highlight = {
-                            Highlight.Default.copy(alpha = if (isBlurEnabled) dampedDragAnimation.pressProgress else 0f)
+                            Highlight.Default.copy(alpha = if (isLiquidGlassEnabled) dampedDragAnimation.pressProgress else 0f)
                         },
                         onDrawSurface = { drawRect(containerColor) }
                     )
-                    .then(if (isBlurEnabled) interactiveHighlight.modifier else Modifier)
+                    .then(if (isLiquidGlassEnabled) interactiveHighlight.modifier else Modifier)
                     .height(56.dp)
                     .padding(horizontal = 4.dp)
                     .graphicsLayer(colorFilter = ColorFilter.tint(accentColor)),
@@ -320,29 +325,29 @@ fun FloatingBottomBar(
                             -progressOffset + panelOffset
                         }
                     }
-                    .then(if (isBlurEnabled) interactiveHighlight.gestureModifier else Modifier)
+                    .then(if (isLiquidGlassEnabled) interactiveHighlight.gestureModifier else Modifier)
                     .then(dampedDragAnimation.modifier)
                     .drawBackdrop(
                         backdrop = rememberCombinedBackdrop(backdrop, tabsBackdrop),
                         shape = { ContinuousCapsule },
                         effects = {
-                            if (isBlurEnabled) {
+                            if (isLiquidGlassEnabled) {
                                 val progress = dampedDragAnimation.pressProgress
                                 lens(10f.dp.toPx() * progress, 14f.dp.toPx() * progress, true)
                             }
                         },
                         highlight = {
-                            Highlight.Default.copy(alpha = if (isBlurEnabled) dampedDragAnimation.pressProgress else 0f)
+                            Highlight.Default.copy(alpha = if (isLiquidGlassEnabled) dampedDragAnimation.pressProgress else 0f)
                         },
-                        shadow = { Shadow(alpha = if (isBlurEnabled) dampedDragAnimation.pressProgress else 0f) },
+                        shadow = { Shadow(alpha = if (isLiquidGlassEnabled) dampedDragAnimation.pressProgress else 0f) },
                         innerShadow = {
                             InnerShadow(
                                 radius = 8f.dp * dampedDragAnimation.pressProgress,
-                                alpha = if (isBlurEnabled) dampedDragAnimation.pressProgress else 0f
+                                alpha = if (isLiquidGlassEnabled) dampedDragAnimation.pressProgress else 0f
                             )
                         },
                         layerBlock = {
-                            if (isBlurEnabled) {
+                            if (isLiquidGlassEnabled) {
                                 scaleX = dampedDragAnimation.scaleX
                                 scaleY = dampedDragAnimation.scaleY
                                 val velocity = dampedDragAnimation.velocity / 10f
@@ -351,7 +356,7 @@ fun FloatingBottomBar(
                             }
                         },
                         onDrawSurface = {
-                            val progress = if (isBlurEnabled) dampedDragAnimation.pressProgress else 0f
+                            val progress = if (isLiquidGlassEnabled) dampedDragAnimation.pressProgress else 0f
                             drawRect(
                                 color = if (isInLightTheme) {
                                     Color.Black.copy(0.1f)
