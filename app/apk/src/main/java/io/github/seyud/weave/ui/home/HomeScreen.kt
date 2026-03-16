@@ -26,8 +26,8 @@ import androidx.compose.ui.unit.dp
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.HazeTint
-import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
+import io.github.seyud.weave.ui.util.defaultHazeEffect
 import io.github.seyud.weave.ui.theme.LocalEnableBlur
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
@@ -118,11 +118,7 @@ fun HomeScreen(
         topBar = {
             TopAppBar(
                 modifier = if (enableBlur) {
-                    Modifier.hazeEffect(hazeState) {
-                        style = hazeStyle
-                        blurRadius = 30.dp
-                        noiseFactor = 0f
-                    }
+                    Modifier.defaultHazeEffect(hazeState, hazeStyle)
                 } else Modifier,
                 color = if (enableBlur) Color.Transparent else MiuixTheme.colorScheme.surface,
                 title = context.getString(CoreR.string.section_home),

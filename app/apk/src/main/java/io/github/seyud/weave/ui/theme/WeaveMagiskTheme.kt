@@ -8,9 +8,9 @@ import top.yukonga.miuix.kmp.theme.ColorSchemeMode
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.theme.ThemeController
 
-val LocalEnableBlur = staticCompositionLocalOf { true }
+val LocalEnableBlur = staticCompositionLocalOf { false }
 val LocalEnableFloatingBottomBar = staticCompositionLocalOf { false }
-val LocalEnableFloatingBottomBarBlur = staticCompositionLocalOf { true }
+val LocalEnableFloatingBottomBarBlur = staticCompositionLocalOf { false }
 
 /**
  * WeaveMagisk 主题包装函数

@@ -69,7 +69,7 @@ import androidx.navigationevent.compose.NavigationBackHandler
 import androidx.navigationevent.compose.rememberNavigationEventState
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.hazeEffect
+import io.github.seyud.weave.ui.util.defaultHazeEffect
 import io.github.seyud.weave.core.R as CoreR
 import io.github.seyud.weave.ui.theme.LocalEnableBlur
 import top.yukonga.miuix.kmp.basic.Icon
@@ -122,11 +122,7 @@ data class SearchStatus(
                     .matchParentSize()
                     .then(
                         if (hazeState != null && hazeStyle != null) {
-                            Modifier.hazeEffect(hazeState) {
-                                style = hazeStyle
-                                blurRadius = 30.dp
-                                noiseFactor = 0f
-                            }
+                            Modifier.defaultHazeEffect(hazeState, hazeStyle)
                         } else {
                             Modifier.background(colorScheme.surface)
                         }
@@ -190,11 +186,7 @@ fun SearchStatus.SearchBox(
             }
             .then(
                 if (hazeState != null && hazeStyle != null) {
-                    Modifier.hazeEffect(hazeState) {
-                        style = hazeStyle
-                        blurRadius = 30.dp
-                        noiseFactor = 0f
-                    }
+                    Modifier.defaultHazeEffect(hazeState, hazeStyle)
                 } else {
                     Modifier.background(colorScheme.surface)
                 }

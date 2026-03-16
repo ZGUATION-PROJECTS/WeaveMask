@@ -95,8 +95,8 @@ import io.github.seyud.weave.ui.deny.DenyListScreen
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.HazeTint
-import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
+import io.github.seyud.weave.ui.util.defaultHazeEffect
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.NavigationBar
 import top.yukonga.miuix.kmp.basic.NavigationBarItem
@@ -571,11 +571,7 @@ private fun MainTabScreen(
             } else {
                 NavigationBar(
                     modifier = if (enableBlur) {
-                        Modifier.hazeEffect(hazeState) {
-                            style = hazeStyle
-                            blurRadius = 30.dp
-                            noiseFactor = 0f
-                        }
+                        Modifier.defaultHazeEffect(hazeState, hazeStyle)
                     } else Modifier,
                     color = if (enableBlur) Color.Transparent else MiuixTheme.colorScheme.surface,
                     content = {

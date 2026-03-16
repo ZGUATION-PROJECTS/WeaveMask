@@ -55,8 +55,8 @@ import androidx.compose.ui.zIndex
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.HazeTint
-import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
+import io.github.seyud.weave.ui.util.defaultHazeEffect
 import io.github.seyud.weave.core.model.su.SuLog
 import io.github.seyud.weave.core.R as CoreR
 import io.github.seyud.weave.core.ktx.timeDateFormat
@@ -122,11 +122,7 @@ fun LogScreen(
         topBar = {
             TopAppBar(
                 modifier = if (enableBlur) {
-                    Modifier.hazeEffect(hazeState) {
-                        style = hazeStyle
-                        blurRadius = 30.dp
-                        noiseFactor = 0f
-                    }
+                    Modifier.defaultHazeEffect(hazeState, hazeStyle)
                 } else {
                     Modifier
                 },
@@ -178,7 +174,7 @@ fun LogScreen(
         val layoutDirection = LocalLayoutDirection.current
         val tabRowHeight = 40.dp
         val tabRowTopPadding = padding.calculateTopPadding()
-        val tabRowContentPadding = tabRowTopPadding + tabRowHeight + 6.dp
+        val tabRowContentPadding = tabRowTopPadding + tabRowHeight + 18.dp
         val contentStartPadding = padding.
         calculateStartPadding(layoutDirection) + 12.dp
         val contentEndPadding = padding.calculateEndPadding(layoutDirection) + 12.dp
@@ -189,18 +185,14 @@ fun LogScreen(
                 modifier = Modifier
                     .then(
                         if (enableBlur) {
-                            Modifier.hazeEffect(hazeState) {
-                                style = hazeStyle
-                                blurRadius = 30.dp
-                                noiseFactor = 0f
-                            }
+                            Modifier.defaultHazeEffect(hazeState, hazeStyle)
                         } else {
                             Modifier.background(MiuixTheme.colorScheme.surface)
                         },
                     )
                     .zIndex(1f)
                     .padding(
-                        top = tabRowTopPadding,
+                        top = tabRowTopPadding + 12.dp,
                         start = padding.calculateStartPadding(layoutDirection),
                         end = padding.calculateEndPadding(layoutDirection),
                         bottom = 6.dp,
