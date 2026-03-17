@@ -29,6 +29,7 @@ import io.github.seyud.weave.R
 import io.github.seyud.weave.core.Config
 import io.github.seyud.weave.core.Info
 import io.github.seyud.weave.core.R as CoreR
+import io.github.seyud.weave.ui.component.MarkdownText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -248,7 +249,7 @@ fun InstallScreen(
 
                 if (hasNotes) {
                     Spacer(modifier = Modifier.height(8.dp))
-                    NotesCard(notes = notes.toString())
+                    NotesCard(notes = viewModel.notesText)
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -518,14 +519,13 @@ private fun MethodCard(
 
 /**
  * 发布说明卡片
- * 显示版本更新说明
+ * 显示版本更新说明，使用Markdown渲染
  */
 @Composable
 private fun NotesCard(notes: String) {
     Card(modifier = Modifier.fillMaxWidth()) {
-        Text(
-            text = notes,
-            style = MiuixTheme.textStyles.body2,
+        MarkdownText(
+            content = notes,
             modifier = Modifier.padding(16.dp)
         )
     }

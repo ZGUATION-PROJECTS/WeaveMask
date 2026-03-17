@@ -141,7 +141,7 @@ internal fun MagiskCard(
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "WeaveMask",
+                        text = "Weave",
                         style = MiuixTheme.textStyles.title3,
                         color = MiuixTheme.colorScheme.primary,
                         maxLines = 1,

@@ -65,6 +65,9 @@ class InstallViewModel(svc: NetworkService, markwon: Markwon) : BaseViewModel() 
     var notes: Spanned = SpannedString("")
         set(value) = set(value, field, { field = it }, BR.notes)
 
+    var notesText: String = ""
+        private set
+
     init {
         viewModelScope.launch(Dispatchers.IO) {
             try {
@@ -78,6 +81,7 @@ class InstallViewModel(svc: NetworkService, markwon: Markwon) : BaseViewModel() 
                         note
                     }
                 }
+                notesText = noteText
                 val spanned = markwon.toMarkdown(noteText)
                 withContext(Dispatchers.Main) {
                     notes = spanned
