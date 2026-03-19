@@ -39,9 +39,8 @@ open class App() : Application() {
             HiddenApiBypass.addHiddenApiExemptions(
                 "Landroid/content/pm/ApplicationInfo;->setEnableOnBackInvokedCallback"
             )
-            // Always keep the back callback enabled on Android 14+ so swipe-back
-            // continues to go through the dispatcher and our NavHost transitions run.
-            setEnableOnBackInvokedCallback(applicationInfo, true)
+            // Use the config value instead of always enabling
+            setEnableOnBackInvokedCallback(applicationInfo, Config.enablePredictiveBack)
         }
     }
 

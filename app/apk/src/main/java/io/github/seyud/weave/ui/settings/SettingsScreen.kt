@@ -406,9 +406,7 @@ fun SettingsScreen(
                             onCheckedChange = {
                                 Config.enablePredictiveBack = it
                                 enablePredictiveBack = it
-                                if (it) {
-                                    CoreApp.setEnableOnBackInvokedCallback(context.applicationInfo, true)
-                                }
+                                CoreApp.setEnableOnBackInvokedCallback(context.applicationInfo, it)
                                 activity.recreate()
                             }
                         )
