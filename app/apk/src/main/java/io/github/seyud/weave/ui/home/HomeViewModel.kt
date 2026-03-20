@@ -234,7 +234,6 @@ class HomeViewModel(
     }
 
     fun onMagiskPressed() = withExternalRW {
-        HomeFragmentDirections.actionHomeFragmentToInstallFragment().navigate()
     }
 
     /**

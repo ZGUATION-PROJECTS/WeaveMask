@@ -6,6 +6,7 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -92,9 +93,9 @@ fun InstallScreen(
     var selectedMethod by remember(viewModel.method) {
         mutableStateOf(
             when (viewModel.method) {
-                R.id.method_patch -> InstallMethod.PATCH
-                R.id.method_direct -> InstallMethod.DIRECT
-                R.id.method_inactive_slot -> InstallMethod.INACTIVE_SLOT
+                InstallViewModel.METHOD_PATCH -> InstallMethod.PATCH
+                InstallViewModel.METHOD_DIRECT -> InstallMethod.DIRECT
+                InstallViewModel.METHOD_INACTIVE_SLOT -> InstallMethod.INACTIVE_SLOT
                 else -> null
             }
         )
@@ -230,9 +231,9 @@ fun InstallScreen(
                     onMethodChange = { newMethod ->
                         selectedMethod = newMethod
                         viewModel.method = when (newMethod) {
-                            InstallMethod.PATCH -> R.id.method_patch
-                            InstallMethod.DIRECT -> R.id.method_direct
-                            InstallMethod.INACTIVE_SLOT -> R.id.method_inactive_slot
+                            InstallMethod.PATCH -> InstallViewModel.METHOD_PATCH
+                            InstallMethod.DIRECT -> InstallViewModel.METHOD_DIRECT
+                            InstallMethod.INACTIVE_SLOT -> InstallViewModel.METHOD_INACTIVE_SLOT
                             null -> -1
                         }
                         // 如果选择了修补文件方法，立即触发文件选择器
@@ -319,7 +320,11 @@ private fun OptionsCard(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable(onClick = onKeepVerityChange)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                onClick = onKeepVerityChange
+                            )
                             .padding(vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -339,7 +344,11 @@ private fun OptionsCard(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable(onClick = onKeepEncChange)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                onClick = onKeepEncChange
+                            )
                             .padding(vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -359,7 +368,11 @@ private fun OptionsCard(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable(onClick = onRecoveryChange)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                onClick = onRecoveryChange
+                            )
                             .padding(vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -457,7 +470,11 @@ private fun MethodCard(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable(onClick = { onMethodChange(InstallMethod.PATCH) })
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                onClick = { onMethodChange(InstallMethod.PATCH) }
+                            )
                             .padding(vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -476,7 +493,11 @@ private fun MethodCard(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable(onClick = { onMethodChange(InstallMethod.DIRECT) })
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null,
+                                    onClick = { onMethodChange(InstallMethod.DIRECT) }
+                                )
                                 .padding(vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -496,7 +517,11 @@ private fun MethodCard(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable(onClick = { onMethodChange(InstallMethod.INACTIVE_SLOT) })
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null,
+                                    onClick = { onMethodChange(InstallMethod.INACTIVE_SLOT) }
+                                )
                                 .padding(vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {

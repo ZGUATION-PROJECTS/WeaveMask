@@ -34,6 +34,16 @@ import io.github.seyud.weave.core.R as CoreR
 
 class InstallViewModel(svc: NetworkService, markwon: Markwon) : BaseViewModel() {
 
+    companion object {
+        private const val INSTALL_STATE_KEY = "install_state"
+        private val uri = MutableLiveData<Uri?>()
+        
+        // 方法ID常量（替代已删除的R.id引用）
+        const val METHOD_PATCH = 1
+        const val METHOD_DIRECT = 2
+        const val METHOD_INACTIVE_SLOT = 3
+    }
+
     val isRooted get() = Info.isRooted
     val skipOptions = Info.isEmulator || (Info.isSAR && !Info.isFDE && Info.ramdisk)
     val noSecondSlot = !isRooted || !Info.isAB || Info.isEmulator
@@ -49,7 +59,7 @@ class InstallViewModel(svc: NetworkService, markwon: Markwon) : BaseViewModel() 
         get() = methodId
         set(value) = set(value, methodId, { methodId = it }, BR.method) {
             when (it) {
-                R.id.method_inactive_slot -> {
+                METHOD_INACTIVE_SLOT -> {
                     SecondSlotWarningDialog().show()
                 }
             }
@@ -94,28 +104,28 @@ class InstallViewModel(svc: NetworkService, markwon: Markwon) : BaseViewModel() 
 
     fun install() {
         when (method) {
-            R.id.method_patch -> FlashFragment.patch(data.value!!).navigate(true)
-            R.id.method_direct -> FlashFragment.flash(false).navigate(true)
-            R.id.method_inactive_slot -> FlashFragment.flash(true).navigate(true)
+            METHOD_PATCH -> FlashFragment.patch(data.value!!).navigate(true)
+            METHOD_DIRECT -> FlashFragment.flash(false).navigate(true)
+            METHOD_INACTIVE_SLOT -> FlashFragment.flash(true).navigate(true)
             else -> error("Unknown value")
         }
     }
 
     fun composeFlashRequest(): ComposeFlashRequest? {
         return when (method) {
-            R.id.method_patch -> data.value?.let {
+            METHOD_PATCH -> data.value?.let {
                 ComposeFlashRequest(
                     action = Const.Value.PATCH_FILE,
                     dataUri = it
                 )
             }
 
-            R.id.method_direct -> ComposeFlashRequest(
+            METHOD_DIRECT -> ComposeFlashRequest(
                 action = Const.Value.FLASH_MAGISK,
                 dataUri = null
             )
 
-            R.id.method_inactive_slot -> ComposeFlashRequest(
+            METHOD_INACTIVE_SLOT -> ComposeFlashRequest(
                 action = Const.Value.FLASH_INACTIVE_SLOT,
                 dataUri = null
             )
@@ -160,8 +170,4 @@ class InstallViewModel(svc: NetworkService, markwon: Markwon) : BaseViewModel() 
         val dataUri: Uri?
     )
 
-    companion object {
-        private const val INSTALL_STATE_KEY = "install_state"
-        private val uri = MutableLiveData<Uri?>()
-    }
 }
