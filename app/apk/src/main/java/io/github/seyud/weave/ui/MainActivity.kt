@@ -64,6 +64,7 @@ import io.github.seyud.weave.ui.home.HomeViewModel
 import io.github.seyud.weave.ui.install.InstallViewModel
 import io.github.seyud.weave.ui.log.LogViewModel
 import io.github.seyud.weave.ui.module.ModuleViewModel
+import io.github.seyud.weave.events.SnackbarEvent
 import io.github.seyud.weave.ui.component.MiuixConfirmDialog
 import io.github.seyud.weave.ui.settings.SettingsViewModel
 import io.github.seyud.weave.ui.superuser.SuperuserViewModel
@@ -72,6 +73,7 @@ import io.github.seyud.weave.ui.theme.LocalEnableFloatingBottomBar
 import io.github.seyud.weave.ui.theme.LocalEnableFloatingBottomBarBlur
 import io.github.seyud.weave.ui.theme.Theme
 import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.basic.SnackbarHostState
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import io.github.seyud.weave.ui.theme.WeaveMagiskTheme
@@ -135,6 +137,7 @@ class MainActivity : AppCompatActivity(), SplashScreenHost, IActivityExtension, 
 
     /** Intent 状态流，用于触发 LaunchedEffect 重新执行 */
     private val intentState = MutableStateFlow(0)
+    private val snackbarHostState = SnackbarHostState()
 
     /**
      * 处理新的 Intent
@@ -270,6 +273,7 @@ class MainActivity : AppCompatActivity(), SplashScreenHost, IActivityExtension, 
                             onExternalZipHandled = { externalZipUri = null },
                             colorMode = colorMode,
                             keyColor = keyColor,
+                            snackbarHostState = snackbarHostState,
                             modifier = Modifier.fillMaxSize()
                         )
                     }
@@ -414,8 +418,22 @@ class MainActivity : AppCompatActivity(), SplashScreenHost, IActivityExtension, 
      *
      * @param event 要处理的事件
      */
+    fun showSnackbar(event: SnackbarEvent) {
+        lifecycleScope.launch {
+            while (true) {
+                val current = snackbarHostState.newestSnackbarData() ?: break
+                current.dismiss()
+            }
+            snackbarHostState.showSnackbar(
+                message = event.resolveMessage(this@MainActivity),
+                duration = event.resolveDuration(),
+            )
+        }
+    }
+
     override fun onEventDispatched(event: ViewEvent) {
         when (event) {
+            is SnackbarEvent -> showSnackbar(event)
             is ContextExecutor -> event(this)
             is ActivityExecutor -> event(this)
             else -> Unit

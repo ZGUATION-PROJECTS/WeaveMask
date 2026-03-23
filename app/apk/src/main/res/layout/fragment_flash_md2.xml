@@ -58,11 +58,7 @@
             app:iconTint="?colorOnPrimary"
             app:layout_fitsSystemWindowsInsets="bottom" />
 
-        <androidx.coordinatorlayout.widget.CoordinatorLayout
-            android:id="@+id/snackbar_container"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            app:fitsSystemWindowsInsets="top|bottom" />
+
 
     </androidx.coordinatorlayout.widget.CoordinatorLayout>
 

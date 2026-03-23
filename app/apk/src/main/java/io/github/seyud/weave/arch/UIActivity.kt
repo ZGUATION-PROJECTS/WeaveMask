@@ -18,7 +18,6 @@ import androidx.databinding.ViewDataBinding
 import androidx.interpolator.view.animation.FastOutSlowInInterpolator
 import androidx.transition.AutoTransition
 import androidx.transition.TransitionManager
-import com.google.android.material.snackbar.Snackbar
 import io.github.seyud.weave.BR
 import io.github.seyud.weave.R
 import io.github.seyud.weave.core.Config
@@ -38,9 +37,6 @@ abstract class UIActivity<Binding : ViewDataBinding>
     override val extension = ActivityExtension(this)
 
     protected val binded get() = ::binding.isInitialized
-
-    open val snackbarView get() = binding.root
-    open val snackbarAnchorView: View? get() = null
 
     init {
         AppCompatDelegate.setDefaultNightMode(Config.darkTheme)
@@ -117,13 +113,6 @@ abstract class UIActivity<Binding : ViewDataBinding>
     fun setAccessibilityDelegate(delegate: View.AccessibilityDelegate?) {
         binding.root.rootView.accessibilityDelegate = delegate
     }
-
-    fun showSnackbar(
-        message: CharSequence,
-        length: Int = Snackbar.LENGTH_SHORT,
-        builder: Snackbar.() -> Unit = {}
-    ) = Snackbar.make(snackbarView, message, length)
-        .setAnchorView(snackbarAnchorView).apply(builder).show()
 
     override fun onResume() {
         super.onResume()

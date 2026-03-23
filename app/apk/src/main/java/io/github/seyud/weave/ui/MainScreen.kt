@@ -35,6 +35,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -109,6 +110,8 @@ import top.yukonga.miuix.kmp.basic.NavigationBar
 import top.yukonga.miuix.kmp.basic.NavigationBarItem
 import top.yukonga.miuix.kmp.basic.NavigationItem
 import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.basic.SnackbarHost
+import top.yukonga.miuix.kmp.basic.SnackbarHostState
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import io.github.seyud.weave.ui.theme.WeaveMagiskTheme
@@ -212,9 +215,11 @@ fun MainScreen(
     onExternalZipHandled: () -> Unit = {},
     colorMode: Int = 0,
     keyColor: Color? = null,
+    snackbarHostState: SnackbarHostState,
     modifier: Modifier = Modifier
 ) {
     val navigator = rememberNavigator(Route.Main)
+    var snackbarBottomPadding by remember { mutableStateOf(0.dp) }
     var rememberedMainTab by rememberSaveable {
         mutableIntStateOf(initialMainTab.coerceIn(0, 3))
     }
@@ -266,11 +271,24 @@ fun MainScreen(
         )
     }
 
+    LaunchedEffect(navigator.current()) {
+        if (navigator.current() !is Route.Main) {
+            snackbarBottomPadding = 0.dp
+        }
+    }
+
     WeaveMagiskTheme(colorMode = colorMode, keyColor = keyColor) {
         CompositionLocalProvider(
             LocalNavigator provides navigator,
         ) {
-            Scaffold { _ ->
+            Scaffold(
+                snackbarHost = {
+                    SnackbarHost(
+                        state = snackbarHostState,
+                        modifier = Modifier.padding(bottom = snackbarBottomPadding)
+                    )
+                }
+            ) { _ ->
                 NavDisplay(
                     backStack = navigator.backStack,
                     entryDecorators = listOf(
@@ -289,7 +307,8 @@ fun MainScreen(
                                 settingsViewModel = settingsViewModel,
                                 logViewModel = logViewModel,
                                 initialMainTab = rememberedMainTab,
-                                onCurrentTabChanged = { rememberedMainTab = it }
+                                onCurrentTabChanged = { rememberedMainTab = it },
+                                onSnackbarBottomPaddingChanged = { snackbarBottomPadding = it }
                             )
                         }
                         entry<Route.Install> {
@@ -367,6 +386,7 @@ private fun MainTabScreen(
     logViewModel: LogViewModel,
     initialMainTab: Int,
     onCurrentTabChanged: (Int) -> Unit,
+    onSnackbarBottomPaddingChanged: (androidx.compose.ui.unit.Dp) -> Unit,
 ) {
     val context = LocalContext.current
     val enableBlur = LocalEnableBlur.current
@@ -514,6 +534,9 @@ private fun MainTabScreen(
             }
         },
     ) { paddingValues ->
+        SideEffect {
+            onSnackbarBottomPaddingChanged(paddingValues.calculateBottomPadding())
+        }
         val contentBottomPadding = paddingValues.calculateBottomPadding() + MainTabContentBottomSpacing
 
         HorizontalPager(

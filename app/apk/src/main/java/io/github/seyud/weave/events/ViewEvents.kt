@@ -5,12 +5,12 @@ import android.view.View
 import androidx.annotation.StringRes
 import androidx.appcompat.app.AppCompatActivity
 import androidx.navigation.NavDirections
-import com.google.android.material.snackbar.Snackbar
 import io.github.seyud.weave.arch.ActivityExecutor
 import io.github.seyud.weave.arch.ContextExecutor
 import io.github.seyud.weave.arch.NavigationActivity
 import io.github.seyud.weave.arch.UIActivity
 import io.github.seyud.weave.arch.ViewEvent
+import io.github.seyud.weave.ui.MainActivity
 import io.github.seyud.weave.core.base.ContentResultCallback
 import io.github.seyud.weave.core.base.IActivityExtension
 import io.github.seyud.weave.core.base.relaunch
@@ -18,6 +18,7 @@ import io.github.seyud.weave.utils.TextHolder
 import io.github.seyud.weave.utils.asText
 import io.github.seyud.weave.view.MagiskDialog
 import io.github.seyud.weave.view.Shortcuts
+import top.yukonga.miuix.kmp.basic.SnackbarDuration
 
 class PermissionEvent(
     private val permission: String,
@@ -98,31 +99,26 @@ class AddHomeIconEvent : ViewEvent(), ContextExecutor {
 
 class SnackbarEvent(
     private val msg: TextHolder,
-    private val length: Int = Snackbar.LENGTH_SHORT,
-    private val builder: Snackbar.() -> Unit = {}
+    private val duration: SnackbarDuration = SnackbarDuration.Short,
 ) : ViewEvent(), ActivityExecutor {
 
     constructor(
         @StringRes res: Int,
-        length: Int = Snackbar.LENGTH_SHORT,
-        builder: Snackbar.() -> Unit = {}
-    ) : this(res.asText(), length, builder)
+        duration: SnackbarDuration = SnackbarDuration.Short,
+    ) : this(res.asText(), duration)
 
     constructor(
         msg: String,
-        length: Int = Snackbar.LENGTH_SHORT,
-        builder: Snackbar.() -> Unit = {}
-    ) : this(msg.asText(), length, builder)
+        duration: SnackbarDuration = SnackbarDuration.Short,
+    ) : this(msg.asText(), duration)
+
+    fun resolveMessage(activity: AppCompatActivity): String =
+        msg.getText(activity.resources).toString()
+
+    fun resolveDuration(): SnackbarDuration = duration
 
     override fun invoke(activity: AppCompatActivity) {
-        val text = msg.getText(activity.resources)
-        val uiActivity = activity as? UIActivity<*>
-        if (uiActivity != null) {
-            uiActivity.showSnackbar(text, length, builder)
-            return
-        }
-        val root = activity.findViewById<View>(android.R.id.content) ?: return
-        Snackbar.make(root, text, length).apply(builder).show()
+        (activity as? MainActivity)?.showSnackbar(this)
     }
 }
 
