@@ -4,9 +4,7 @@ import android.net.Uri
 import androidx.core.net.toFile
 import io.github.seyud.weave.core.AppContext
 import io.github.seyud.weave.core.Const
-import io.github.seyud.weave.core.ktx.writeTo
 import io.github.seyud.weave.core.utils.MediaStoreUtils.displayName
-import io.github.seyud.weave.core.utils.MediaStoreUtils.inputStream
 import com.topjohnwu.superuser.Shell
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -35,11 +33,17 @@ open class FlashZip(
             File(installDir, "install.zip").also {
                 console.add("- Copying zip to temp directory")
                 try {
-                    mUri.inputStream().writeTo(it)
+                    // Use ContentResolver from AppContext to open input stream
+                    // The temporary read permission is granted to the app when receiving the Intent
+                    AppContext.contentResolver.openInputStream(mUri)?.use { input ->
+                        it.outputStream().use { output ->
+                            input.copyTo(output)
+                        }
+                    } ?: throw FileNotFoundException("Cannot open input stream for: $mUri")
                 } catch (e: IOException) {
                     when (e) {
-                        is FileNotFoundException -> console.add("! Invalid Uri")
-                        else -> console.add("! Cannot copy to cache")
+                        is FileNotFoundException -> console.add("! Invalid Uri: ${e.message}")
+                        else -> console.add("! Cannot copy to cache: ${e.message}")
                     }
                     throw e
                 }
@@ -48,7 +52,7 @@ open class FlashZip(
 
         try {
             val binary = File(installDir, "update-binary")
-            AppContext.assets.open("module_installer.sh").use { it.writeTo(binary) }
+            AppContext.assets.open("module_installer.sh").use { it.copyTo(binary.outputStream()) }
         } catch (e: IOException) {
             console.add("! Unzip error")
             throw e

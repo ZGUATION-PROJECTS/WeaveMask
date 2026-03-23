@@ -43,6 +43,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.sp
@@ -54,6 +55,8 @@ import io.github.seyud.weave.core.Const
 import io.github.seyud.weave.core.intent
 import io.github.seyud.weave.core.R as CoreR
 import io.github.seyud.weave.core.model.module.LocalModule
+import io.github.seyud.weave.core.utils.MediaStoreUtils
+import io.github.seyud.weave.dialog.LocalModuleInstallDialog
 import io.github.seyud.weave.ui.component.FloatingBottomBar
 import io.github.seyud.weave.ui.component.FloatingBottomBarItem
 import io.github.seyud.weave.ui.theme.LocalEnableBlur
@@ -270,6 +273,8 @@ fun MainScreen(
     initialMainTab: Int = 0,
     pendingFlashAction: String? = null,
     pendingFlashUri: Uri? = null,
+    externalZipUri: Uri? = null,
+    onExternalZipHandled: () -> Unit = {},
     colorMode: Int = 0,
     keyColor: Color? = null,
     modifier: Modifier = Modifier
@@ -286,6 +291,46 @@ fun MainScreen(
                 launchSingleTop = true
             }
         }
+    }
+
+    // 处理外部应用通过"打开方式"打开的 ZIP 文件
+    var pendingExternalZip by remember { mutableStateOf<Uri?>(null) }
+    val context = LocalContext.current
+
+    LaunchedEffect(externalZipUri) {
+        if (externalZipUri != null) {
+            pendingExternalZip = externalZipUri
+        }
+    }
+
+    // 显示外部 ZIP 文件确认对话框
+    if (pendingExternalZip != null) {
+        val displayName = remember(pendingExternalZip) {
+            pendingExternalZip?.let { uri ->
+                runCatching { with(MediaStoreUtils) { uri.displayName } }.getOrDefault("module.zip")
+            } ?: "module.zip"
+        }
+
+        LocalModuleInstallDialog(
+            state = LocalModuleInstallDialog.DialogState(
+                visible = true,
+                uri = pendingExternalZip,
+                displayName = displayName
+            ),
+            context = context,
+            onDismiss = {
+                pendingExternalZip = null
+                onExternalZipHandled()
+            },
+            onConfirm = {
+                pendingExternalZip?.let { uri ->
+                    navController.navigate(Screen.Flash.createRoute(Const.Value.FLASH_ZIP, uri))
+                }
+                pendingExternalZip = null
+                onExternalZipHandled()
+            },
+            renderInRootScaffold = true
+        )
     }
 
     WeaveMagiskTheme(colorMode = colorMode, keyColor = keyColor) {

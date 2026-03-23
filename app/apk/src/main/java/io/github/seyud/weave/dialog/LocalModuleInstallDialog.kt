@@ -42,13 +42,15 @@ object LocalModuleInstallDialog {
  * @param context Context
  * @param onDismiss 关闭回调
  * @param onConfirm 确认安装回调
+ * @param renderInRootScaffold 是否在根 Scaffold 中渲染，默认为 false
  */
 @Composable
 fun LocalModuleInstallDialog(
     state: LocalModuleInstallDialog.DialogState,
     context: Context,
     onDismiss: () -> Unit,
-    onConfirm: () -> Unit
+    onConfirm: () -> Unit,
+    renderInRootScaffold: Boolean = false
 ) {
     if (!state.visible) return
 
@@ -56,7 +58,8 @@ fun LocalModuleInstallDialog(
         show = state.visible,
         title = context.getString(CoreR.string.confirm_install_title),
         summary = context.getString(CoreR.string.confirm_install, state.displayName),
-        onDismissRequest = onDismiss
+        onDismissRequest = onDismiss,
+        renderInRootScaffold = renderInRootScaffold
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),

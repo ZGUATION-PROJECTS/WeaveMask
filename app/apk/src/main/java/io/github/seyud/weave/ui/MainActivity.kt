@@ -3,6 +3,7 @@ package io.github.seyud.weave.ui
 import android.Manifest
 import android.Manifest.permission.REQUEST_INSTALL_PACKAGES
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.ApplicationInfo
 import android.content.res.Configuration
@@ -19,8 +20,11 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -29,11 +33,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
+import kotlinx.coroutines.flow.MutableStateFlow
 import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import timber.log.Timber
 import androidx.lifecycle.lifecycleScope
 import io.github.seyud.weave.arch.BaseViewModel
 import io.github.seyud.weave.arch.ActivityExecutor
@@ -64,6 +71,9 @@ import io.github.seyud.weave.ui.theme.LocalEnableBlur
 import io.github.seyud.weave.ui.theme.LocalEnableFloatingBottomBar
 import io.github.seyud.weave.ui.theme.LocalEnableFloatingBottomBarBlur
 import io.github.seyud.weave.ui.theme.Theme
+import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 import io.github.seyud.weave.ui.theme.WeaveMagiskTheme
 import io.github.seyud.weave.view.MagiskDialog
 import io.github.seyud.weave.view.Shortcuts
@@ -123,6 +133,22 @@ class MainActivity : AppCompatActivity(), SplashScreenHost, IActivityExtension, 
 
     private var showAddShortcutDialog by mutableStateOf(false)
 
+    /** Intent 状态流，用于触发 LaunchedEffect 重新执行 */
+    private val intentState = MutableStateFlow(0)
+
+    /**
+     * 处理新的 Intent
+     * 当 Activity 已存在且收到新的 Intent 时调用
+     * 用于处理外部应用通过"打开方式"打开 ZIP 文件
+     *
+     * @param intent 新的 Intent
+     */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        intentState.value += 1
+    }
+
     /**
      * Activity 创建时的生命周期回调
      * 设置主题并初始化启动画面控制器
@@ -162,6 +188,9 @@ class MainActivity : AppCompatActivity(), SplashScreenHost, IActivityExtension, 
         val pendingFlashUri = intent.getStringExtra(EXTRA_FLASH_URI)?.let { Uri.parse(it) }
         intent.removeExtra(EXTRA_FLASH_ACTION)
         intent.removeExtra(EXTRA_FLASH_URI)
+
+        // 检查是否通过"打开方式"启动（首次启动时检查）
+        val initialExternalZipUri = checkForExternalZipIntent(intent)
 
         // 设置 Compose 内容
         setContent {
@@ -214,21 +243,37 @@ class MainActivity : AppCompatActivity(), SplashScreenHost, IActivityExtension, 
                 LocalEnableFloatingBottomBar provides enableFloatingBottomBar,
                 LocalEnableFloatingBottomBarBlur provides enableFloatingBottomBarBlur,
             ) {
-                MainScreen(
-                    homeViewModel = homeViewModel,
-                    flashViewModel = flashViewModel,
-                    moduleViewModel = moduleViewModel,
-                    superuserViewModel = superuserViewModel,
-                    logViewModel = logViewModel,
-                    installViewModel = installViewModel,
-                    settingsViewModel = settingsViewModel,
-                    initialMainTab = initialMainTab,
-                    pendingFlashAction = pendingFlashAction,
-                    pendingFlashUri = pendingFlashUri,
-                    colorMode = colorMode,
-                    keyColor = keyColor,
-                    modifier = Modifier.fillMaxSize()
+                // 处理外部应用通过"打开方式"打开 ZIP 文件
+                var externalZipUri by remember { mutableStateOf(initialExternalZipUri) }
+
+                // 监听外部 Intent 打开的 ZIP 文件（用于 Activity 已在后台时）
+                ZipFileIntentHandler(
+                    intentState = intentState,
+                    onZipReceived = { uri -> externalZipUri = uri }
                 )
+
+                // 根 Scaffold 用于提供 LocalRootDialogStates，使 SuperDialog 能够正确渲染
+                WeaveMagiskTheme(colorMode = colorMode, keyColor = keyColor) {
+                    Scaffold(modifier = Modifier.fillMaxSize()) {
+                        MainScreen(
+                            homeViewModel = homeViewModel,
+                            flashViewModel = flashViewModel,
+                            moduleViewModel = moduleViewModel,
+                            superuserViewModel = superuserViewModel,
+                            logViewModel = logViewModel,
+                            installViewModel = installViewModel,
+                            settingsViewModel = settingsViewModel,
+                            initialMainTab = initialMainTab,
+                            pendingFlashAction = pendingFlashAction,
+                            pendingFlashUri = pendingFlashUri,
+                            externalZipUri = externalZipUri,
+                            onExternalZipHandled = { externalZipUri = null },
+                            colorMode = colorMode,
+                            keyColor = keyColor,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+                }
 
                 WeaveMagiskTheme(colorMode = colorMode, keyColor = keyColor) {
                     MiuixConfirmDialog(
@@ -467,6 +512,122 @@ class MainActivity : AppCompatActivity(), SplashScreenHost, IActivityExtension, 
             // 标记已询问过
             Config.askedHome = true
             showAddShortcutDialog = true
+        }
+    }
+
+    /**
+     * 检查 Intent 是否为外部应用通过"打开方式"打开 ZIP 文件
+     * 用于首次启动时检查
+     *
+     * 注意：必须在 Activity 中立即处理 content URI，因为临时读取权限只授予给 Activity。
+     * 这里会将文件复制到缓存目录，然后返回缓存文件的 URI。
+     *
+     * @param intent 要检查的 Intent
+     * @return 如果是有效的 ZIP 文件则返回缓存文件的 URI，否则返回 null
+     */
+    private fun checkForExternalZipIntent(intent: Intent): Uri? {
+        val uri = intent.data ?: return null
+
+        // 验证 Intent 有效性
+        if (uri.scheme != "content") return null
+
+        // 检查 MIME type，允许 null（某些文件管理器不设置 type）
+        val mimeType = intent.type
+        if (mimeType != null && mimeType != "application/zip" && !mimeType.contains("zip")) {
+            return null
+        }
+
+        // 清除 Intent 数据防止重复处理
+        intent.data = null
+        intent.type = null
+
+        // 立即将文件复制到缓存目录，因为此时 Activity 拥有临时读取权限
+        return try {
+            copyUriToCache(uri)
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to copy external ZIP to cache")
+            null
+        }
+    }
+
+    /**
+     * 将 content URI 复制到缓存目录
+     * 必须在 Activity 中调用，因为临时读取权限只授予给 Activity
+     *
+     * @param uri content URI
+     * @return 缓存文件的 file:// URI
+     */
+    private fun copyUriToCache(uri: Uri): Uri? {
+        val cacheDir = File(cacheDir, "external_module")
+        cacheDir.mkdirs()
+
+        // 获取文件名
+        val fileName = try {
+            contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+                val index = cursor.getColumnIndexOrThrow(android.provider.OpenableColumns.DISPLAY_NAME)
+                if (cursor.moveToFirst()) cursor.getString(index) else "module.zip"
+            } ?: "module.zip"
+        } catch (e: Exception) {
+            "module.zip"
+        }
+
+        val cacheFile = File(cacheDir, fileName)
+
+        // 复制文件
+        contentResolver.openInputStream(uri)?.use { input ->
+            cacheFile.outputStream().use { output ->
+                input.copyTo(output)
+            }
+        } ?: return null
+
+        return Uri.fromFile(cacheFile)
+    }
+
+    /**
+     * 处理外部应用通过"打开方式"打开 ZIP 文件的 Intent
+     * - 验证 Intent 有效性（scheme、mimeType）
+     * - 清除 Intent 数据防止重复处理
+     * - 立即将文件复制到缓存目录（因为临时读取权限只授予给 Activity）
+     * - 通知 MainScreen 有外部 ZIP 文件待处理
+     *
+     * @param intentState Intent 状态流，用于触发 LaunchedEffect 重新执行
+     * @param onZipReceived 接收到有效 ZIP URI 时的回调
+     */
+    @Composable
+    private fun ZipFileIntentHandler(
+        intentState: MutableStateFlow<Int>,
+        onZipReceived: (Uri) -> Unit
+    ) {
+        val activity = this
+        val intentStateValue by intentState.collectAsState()
+
+        LaunchedEffect(intentStateValue) {
+            val currentIntent = activity.intent
+            val uri = currentIntent?.data ?: return@LaunchedEffect
+
+            // 验证 Intent 有效性
+            if (uri.scheme != "content") return@LaunchedEffect
+
+            // 检查 MIME type，允许 null（某些文件管理器不设置 type）
+            val mimeType = currentIntent.type
+            if (mimeType != null && mimeType != "application/zip" && !mimeType.contains("zip")) {
+                return@LaunchedEffect
+            }
+
+            // 清除 Intent 数据防止重复处理
+            activity.intent.data = null
+            activity.intent.type = null
+
+            // 立即将文件复制到缓存目录，因为此时 Activity 拥有临时读取权限
+            val cachedUri = try {
+                copyUriToCache(uri)
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to copy external ZIP to cache")
+                null
+            }
+
+            // 通知外部 ZIP 文件已接收
+            cachedUri?.let { onZipReceived(it) }
         }
     }
 }
