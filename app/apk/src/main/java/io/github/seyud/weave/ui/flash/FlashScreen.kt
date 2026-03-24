@@ -44,6 +44,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.github.seyud.weave.core.Const
 import io.github.seyud.weave.core.R as CoreR
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
@@ -72,6 +73,7 @@ fun FlashScreen(
     var state by remember { mutableStateOf(viewModel.state.value ?: FlashViewModel.State.FLASHING) }
     val lines by viewModel.consoleLines.collectAsStateWithLifecycle()
     val isFlashing = state == FlashViewModel.State.FLASHING
+    val moduleInstallBannerLines = remember { FlashViewModel.moduleInstallBannerLines }
 
     DisposableEffect(viewModel, lifecycleOwner) {
         val observer = Observer<FlashViewModel.State> {
@@ -148,12 +150,16 @@ fun FlashScreen(
                             modifier = Modifier.fillMaxSize(),
                             verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            itemsIndexed(lines) { _, line ->
+                            itemsIndexed(lines) { index, line ->
+                                val isBannerLine = action == Const.Value.FLASH_ZIP &&
+                                    index < moduleInstallBannerLines.size &&
+                                    line == moduleInstallBannerLines[index]
                                 Text(
                                     text = line,
                                     style = MiuixTheme.textStyles.body2.copy(
                                         fontFamily = FontFamily.Monospace,
-                                        lineHeight = 18.sp
+                                        fontSize = if (isBannerLine) 11.sp else MiuixTheme.textStyles.body2.fontSize,
+                                        lineHeight = if (isBannerLine) 13.sp else 18.sp
                                     )
                                 )
                             }

@@ -34,6 +34,18 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class FlashViewModel : BaseViewModel() {
+    companion object {
+        private const val MODULE_INSTALL_BANNER = """
+            __        __                    __  __           _
+            \ \      / /__  __ ___   _____ |  \/  | __ _ ___| | __
+             \ \ /\ / / _ \/ _` \ \ / / _ \| |\/| |/ _` / __| |/ /
+              \ V  V /  __/ (_| |\ V /  __/| |  | | (_| \__ \   <
+               \_/\_/ \___|\__,_| \_/ \___||_|  |_|\__,_|___/_|\_\
+        """
+
+        internal val moduleInstallBannerLines: List<String> =
+            MODULE_INSTALL_BANNER.trimIndent().lines()
+    }
 
     enum class State {
         FLASHING, SUCCESS, FAILED
@@ -92,6 +104,17 @@ class FlashViewModel : BaseViewModel() {
         _consoleLines.value = emptyList()
     }
 
+    private fun appendVisibleConsoleLine(line: String) {
+        items.add(ConsoleItem(line))
+        logItems.add(line)
+        _consoleLines.value = _consoleLines.value + line
+    }
+
+    private fun appendModuleInstallBanner() {
+        moduleInstallBannerLines.forEach(::appendVisibleConsoleLine)
+        appendVisibleConsoleLine("")
+    }
+
     fun startFlashing() {
         if (isFlashingStarted) return
         isFlashingStarted = true
@@ -105,6 +128,7 @@ class FlashViewModel : BaseViewModel() {
                             console.add("Error: No file selected")
                             false
                         } else {
+                            appendModuleInstallBanner()
                             FlashZip(uri, outItems, logItems).exec()
                         }
                     }
