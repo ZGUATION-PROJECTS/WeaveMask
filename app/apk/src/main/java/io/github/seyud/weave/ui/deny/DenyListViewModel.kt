@@ -1,6 +1,7 @@
 package io.github.seyud.weave.ui.deny
 
 import android.annotation.SuppressLint
+import android.content.pm.PackageManager
 import android.content.pm.PackageManager.MATCH_UNINSTALLED_PACKAGES
 import androidx.compose.ui.state.ToggleableState
 import androidx.lifecycle.viewModelScope
@@ -8,6 +9,9 @@ import com.topjohnwu.superuser.Shell
 import io.github.seyud.weave.arch.AsyncLoadViewModel
 import io.github.seyud.weave.core.AppContext
 import io.github.seyud.weave.core.ktx.concurrentMap
+import io.github.seyud.weave.core.utils.InstalledItemLoadResult
+import io.github.seyud.weave.core.utils.InstalledItemSource
+import io.github.seyud.weave.core.utils.InstalledPackageLoader
 import io.github.seyud.weave.core.utils.RootUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -26,6 +30,12 @@ import kotlinx.coroutines.withContext
 
 class DenyListViewModel : AsyncLoadViewModel() {
 
+    private data class LoadedApps(
+        val apps: List<DenyListAppInfo>,
+        val source: InstalledItemSource,
+        val shouldRefreshFromRoot: Boolean,
+    )
+
     private var hasLoaded = false
 
     private val _loading = MutableStateFlow(false)
@@ -43,6 +53,7 @@ class DenyListViewModel : AsyncLoadViewModel() {
 
     private val processJobs = mutableMapOf<String, Job>()
     private var delayedLoadingJob: Job? = null
+    private var rootRefreshJob: Job? = null
 
     var query: String
         get() = _query.value
@@ -133,29 +144,23 @@ class DenyListViewModel : AsyncLoadViewModel() {
             _loading.value = true
         }
         try {
-            val (denyList, apps) = withContext(Dispatchers.IO) {
+            val (denyList, loadedApps) = withContext(Dispatchers.IO) {
                 val pm = AppContext.packageManager
                 val denyEntries = Shell.cmd("magisk --denylist ls").exec().out.map(::CmdlineListItem)
-                // Use RootService to get installed applications, bypassing QUERY_ALL_PACKAGES permission
-                val installedApps = RootUtils.getInstalledApplications(MATCH_UNINSTALLED_PACKAGES)
-                val collected = installedApps.run {
-                    asFlow()
-                        .filter { AppContext.packageName != it.packageName }
-                        .concurrentMap { buildDenyListAppInfo(it, pm, denyEntries) }
-                        .toCollection(ArrayList(size))
-                }
-                collected.sort()
-                denyEntries to collected
+                denyEntries to loadApps(pm, denyEntries)
             }
+            val apps = loadedApps.apps
             _denyList.value = denyList
             _allApps.value = apps
             hasLoaded = true
             preloadSelectedProcesses(apps, denyList)
+            scheduleRootRefreshIfNeeded(loadedApps.shouldRefreshFromRoot)
         } finally {
+            val waitingForRootRefresh = _allApps.value.isEmpty() && rootRefreshJob?.isActive == true
             delayedLoadingJob?.cancel()
             delayedLoadingJob = null
-            _loading.value = false
-            _loadCompleted.value = true
+            _loading.value = waitingForRootRefresh
+            _loadCompleted.value = !waitingForRootRefresh
         }
     }
 
@@ -322,6 +327,65 @@ class DenyListViewModel : AsyncLoadViewModel() {
                 entry.process.startsWith("$packageName:") ||
                 entry.process.startsWith("$defaultProcess:")
         }
+    }
+
+    @SuppressLint("InlinedApi")
+    private fun scheduleRootRefreshIfNeeded(shouldRefreshFromRoot: Boolean) {
+        if (!shouldRefreshFromRoot || rootRefreshJob?.isActive == true) return
+        rootRefreshJob = viewModelScope.launch {
+            try {
+                repeat(ROOT_REFRESH_MAX_ATTEMPTS) { attempt ->
+                    if (RootUtils.isServiceConnected()) {
+                        refreshAppsFromRoot()
+                        return@launch
+                    }
+                    if (attempt < ROOT_REFRESH_MAX_ATTEMPTS - 1) {
+                        delay(ROOT_REFRESH_INTERVAL_MS)
+                    }
+                }
+            } finally {
+                _loading.value = false
+                _loadCompleted.value = true
+            }
+        }
+    }
+
+    @SuppressLint("InlinedApi")
+    private suspend fun refreshAppsFromRoot() {
+        val loadedApps = withContext(Dispatchers.IO) {
+            loadApps(AppContext.packageManager, _denyList.value)
+        }
+        if (loadedApps.source != InstalledItemSource.ROOT || loadedApps.apps.isEmpty()) {
+            return
+        }
+        _allApps.value = loadedApps.apps
+        preloadSelectedProcesses(loadedApps.apps, _denyList.value)
+    }
+
+    @SuppressLint("InlinedApi")
+    private suspend fun loadApps(
+        pm: PackageManager,
+        denyEntries: List<CmdlineListItem>,
+    ): LoadedApps {
+        val loadResult: InstalledItemLoadResult<android.content.pm.ApplicationInfo> =
+            InstalledPackageLoader.loadApplications(MATCH_UNINSTALLED_PACKAGES, pm)
+        val collected = loadResult.items.run {
+            asFlow()
+                .filter { AppContext.packageName != it.packageName }
+                .concurrentMap { buildDenyListAppInfo(it, pm, denyEntries) }
+                .toCollection(ArrayList(size))
+        }
+        collected.sort()
+        return LoadedApps(
+            apps = collected,
+            source = loadResult.source,
+            shouldRefreshFromRoot = loadResult.shouldRefreshFromRoot,
+        )
+    }
+
+    private companion object {
+        const val ROOT_REFRESH_INTERVAL_MS = 350L
+        const val ROOT_REFRESH_MAX_ATTEMPTS = 15
     }
 
 }

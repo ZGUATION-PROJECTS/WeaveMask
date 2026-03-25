@@ -20,6 +20,7 @@ import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.PrintStream
+import java.io.StringReader
 import java.security.SecureRandom
 import java.util.Random
 import java.util.zip.Deflater
@@ -31,9 +32,18 @@ import javax.crypto.Cipher
 import javax.crypto.CipherOutputStream
 import javax.crypto.spec.IvParameterSpec
 import javax.crypto.spec.SecretKeySpec
+import javax.xml.parsers.DocumentBuilderFactory
+import javax.xml.transform.OutputKeys
+import javax.xml.transform.TransformerFactory
+import javax.xml.transform.dom.DOMSource
+import javax.xml.transform.stream.StreamResult
 import kotlin.random.asKotlinRandom
+import org.w3c.dom.Document
+import org.w3c.dom.Element
+import org.xml.sax.InputSource
 
 private val kRANDOM get() = RANDOM.asKotlinRandom()
+private const val ANDROID_NS = "http://schemas.android.com/apk/res/android"
 
 private val c1 = mutableListOf<String>()
 private val c2 = mutableListOf<String>()
@@ -76,6 +86,10 @@ private fun PrintStream.byteField(name: String, bytes: ByteArray) {
     println("};")
     println("return buf;")
     println("}")
+}
+
+private fun PrintStream.stringField(name: String, value: String) {
+    println("""public static final String $name = "$value";""")
 }
 
 @CacheableTask
@@ -177,15 +191,74 @@ private abstract class ManifestUpdater: DefaultTask() {
 
         // Shuffle the order of the components
         cmpList.shuffle(RANDOM)
-        val components = cmpList.joinToString("\n\n")
-            .replace("\${applicationId}", applicationId.get())
-        val manifest = mergedManifest.asFile.get().readText().replace(Regex(".*\\<application"), """
-            |<application
-            |    android:appComponentFactory="${factoryClass.get()}"
-            |    android:name="${appClass.get()}"""".ind(1)
-        ).replace(Regex(".*\\<\\/application"), "$components\n    </application")
-        outputManifest.get().asFile.writeText(manifest)
+        val document = parseManifest(mergedManifest.asFile.get())
+        val application = document.getElementsByTagName("application")
+            .item(0) as? Element ?: error("No <application> node in merged manifest")
+
+        application.setAttributeNS(ANDROID_NS, "android:appComponentFactory", factoryClass.get())
+        application.setAttributeNS(ANDROID_NS, "android:name", appClass.get())
+
+        removePlaceholderComponents(application)
+        cmpList.forEach { componentXml ->
+            val resolvedXml = componentXml.replace("\${applicationId}", applicationId.get())
+            appendComponent(document, application, resolvedXml)
+        }
+
+        writeManifest(document, outputManifest.asFile.get())
     }
+
+    private fun parseManifest(file: File): Document {
+        return newDocumentBuilder().parse(file)
+    }
+
+    private fun appendComponent(document: Document, application: Element, componentXml: String) {
+        val fragmentDocument = newDocumentBuilder().parse(
+            InputSource(
+                StringReader(
+                    """
+                    <root xmlns:android="$ANDROID_NS">
+                    $componentXml
+                    </root>
+                    """.trimIndent()
+                )
+            )
+        )
+        val root = fragmentDocument.documentElement
+        val nodes = (0 until root.childNodes.length)
+            .map { root.childNodes.item(it) }
+            .filterNot { it.nodeType == org.w3c.dom.Node.TEXT_NODE && it.textContent.isBlank() }
+
+        nodes.forEach { node ->
+            application.appendChild(document.importNode(node, true))
+        }
+    }
+
+    private fun removePlaceholderComponents(application: Element) {
+        val toRemove = (0 until application.childNodes.length)
+            .map { application.childNodes.item(it) }
+            .filterIsInstance<Element>()
+            .filter { child ->
+                child.getAttributeNS(ANDROID_NS, "name").startsWith("x.COMPONENT_PLACEHOLDER_")
+            }
+
+        toRemove.forEach(application::removeChild)
+    }
+
+    private fun writeManifest(document: Document, outputFile: File) {
+        val transformer = TransformerFactory.newInstance().newTransformer().apply {
+            setOutputProperty(OutputKeys.INDENT, "yes")
+            setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "no")
+            setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "4")
+        }
+        outputFile.outputStream().use { stream ->
+            transformer.transform(DOMSource(document), StreamResult(stream))
+        }
+    }
+
+    private fun newDocumentBuilder() =
+        DocumentBuilderFactory.newInstance().apply {
+            isNamespaceAware = true
+        }.newDocumentBuilder()
 }
 
 private fun genStubClasses(outDir: File): Pair<String, String> {
@@ -238,9 +311,10 @@ private fun genStubClasses(outDir: File): Pair<String, String> {
     return Pair(factory, app)
 }
 
-private fun genEncryptedResources(res: ByteArray, outDir: File) {
-    val mainPkgDir = File(outDir, "io/github/seyud/weave")
+private fun genEncryptedResources(res: ByteArray, javaOutDir: File, assetsOutDir: File) {
+    val mainPkgDir = File(javaOutDir, "io/github/seyud/weave")
     mainPkgDir.mkdirs()
+    assetsOutDir.mkdirs()
 
     // Generate iv and key
     val iv = ByteArray(16)
@@ -258,13 +332,16 @@ private fun genEncryptedResources(res: ByteArray, outDir: File) {
         }
     }
 
+    val assetName = "res.enc"
+    File(assetsOutDir, assetName).writeBytes(bos.toByteArray())
+
     PrintStream(File(mainPkgDir, "Bytes.java")).use {
         it.println("package io.github.seyud.weave;")
         it.println("public final class Bytes {")
 
+        it.stringField("RES_ASSET", assetName)
         it.byteField("key", key)
         it.byteField("iv", iv)
-        it.byteField("res", bos.toByteArray())
 
         it.println("}")
     }
@@ -273,6 +350,14 @@ private fun genEncryptedResources(res: ByteArray, outDir: File) {
 private abstract class TaskWithDir : DefaultTask() {
     @get:OutputDirectory
     abstract val outputFolder: DirectoryProperty
+}
+
+private abstract class GeneratedStubResourcesTask : DefaultTask() {
+    @get:OutputDirectory
+    abstract val javaOutputFolder: DirectoryProperty
+
+    @get:OutputDirectory
+    abstract val assetsOutputFolder: DirectoryProperty
 }
 
 fun Project.setupStubApk() {
@@ -311,9 +396,10 @@ fun Project.setupStubApk() {
                     "${variantLowered}/process${variantCapped}Resources/" +
                     "linked-resources-binary-format-${variantLowered}.ap_").get().asFile
 
-            val genResourcesTask = tasks.register("generate${variantCapped}BundledResources", TaskWithDir::class) {
+            val genResourcesTask = tasks.register("generate${variantCapped}BundledResources", GeneratedStubResourcesTask::class) {
                 dependsOn("process${variantCapped}Resources")
-                outputFolder.set(layout.buildDirectory.dir("generated/${variantLowered}/resources"))
+                javaOutputFolder.set(layout.buildDirectory.dir("generated/${variantLowered}/resources/java"))
+                assetsOutputFolder.set(layout.buildDirectory.dir("generated/${variantLowered}/resources/assets"))
 
                 doLast {
                     val apkTmp = File("${apk}.tmp")
@@ -334,13 +420,20 @@ fun Project.setupStubApk() {
                         }
                     }
                     apkTmp.delete()
-                    genEncryptedResources(bos.toByteArray(), outputFolder.get().asFile)
+                    genEncryptedResources(
+                        res = bos.toByteArray(),
+                        javaOutDir = javaOutputFolder.get().asFile,
+                        assetsOutDir = assetsOutputFolder.get().asFile,
+                    )
                 }
             }
 
             variant.sources.java?.let {
                 it.addStaticSourceDirectory(componentJavaOutDir.path)
-                it.addGeneratedSourceDirectory(genResourcesTask, TaskWithDir::outputFolder)
+                it.addGeneratedSourceDirectory(genResourcesTask, GeneratedStubResourcesTask::javaOutputFolder)
+            }
+            variant.sources.assets?.let {
+                it.addGeneratedSourceDirectory(genResourcesTask, GeneratedStubResourcesTask::assetsOutputFolder)
             }
         }
     }

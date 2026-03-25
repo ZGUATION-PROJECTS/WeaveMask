@@ -46,6 +46,7 @@ dependencies {
     api(libs.libsu.nio)
 
     implementation(libs.hiddenapibypass)
+    implementation(libs.rikka.parcelablelist)
 
     implementation(libs.retrofit)
     implementation(libs.retrofit.moshi)

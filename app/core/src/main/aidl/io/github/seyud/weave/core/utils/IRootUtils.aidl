@@ -2,6 +2,8 @@
 package io.github.seyud.weave.core.utils;
 
 // Declare any non-default types here with import statements
+import android.content.pm.PackageInfo;
+import rikka.parcelablelist.ParcelableListSlice;
 
 interface IRootUtils {
     android.app.ActivityManager.RunningAppProcessInfo getAppProcess(int pid);
@@ -9,5 +11,5 @@ interface IRootUtils {
     boolean addSystemlessHosts();
     List<android.content.pm.ApplicationInfo> getInstalledApplications(int flags);
     int[] getUserIds();
-    List<android.content.pm.PackageInfo> getPackages(int flags);
+    ParcelableListSlice getPackages(int flags);
 }

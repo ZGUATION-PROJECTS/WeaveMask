@@ -25,9 +25,9 @@ import io.github.seyud.weave.net.Networking;
 import io.github.seyud.weave.net.Request;
 import io.github.seyud.weave.utils.APKInstall;
 
-import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.concurrent.ExecutorService;
@@ -138,10 +138,14 @@ public class DownloadActivity extends Activity {
         IvParameterSpec iv = new IvParameterSpec(Bytes.iv());
         cipher.init(Cipher.DECRYPT_MODE, key, iv);
         var is = new InflaterInputStream(new CipherInputStream(
-                new ByteArrayInputStream(Bytes.res()), cipher));
+                openEncryptedResource(), cipher));
         try (is; out) {
             APKInstall.transfer(is, out);
         }
+    }
+
+    private InputStream openEncryptedResource() throws IOException {
+        return getAssets().open(Bytes.RES_ASSET);
     }
 
     private void loadResources() throws Exception {

@@ -15,6 +15,9 @@ import android.content.pm.PackageInstaller.SessionParams;
 import android.net.Uri;
 import android.os.Build;
 
+import androidx.core.content.ContextCompat;
+import androidx.core.os.BundleCompat;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FilterOutputStream;
@@ -36,15 +39,14 @@ public final class APKInstall {
         }
     }
 
-    @SuppressWarnings("deprecation")
     public static void registerReceiver(
             Context context, BroadcastReceiver receiver, IntentFilter filter) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            // noinspection InlinedApi
-            context.registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED);
-        } else {
-            context.registerReceiver(receiver, filter);
-        }
+        ContextCompat.registerReceiver(
+                context,
+                receiver,
+                filter,
+                ContextCompat.RECEIVER_NOT_EXPORTED
+        );
     }
 
     public static Session startSession(Context context) {
@@ -101,7 +103,7 @@ public final class APKInstall {
                 int status = intent.getIntExtra(EXTRA_STATUS, STATUS_FAILURE_INVALID);
                 switch (status) {
                     case STATUS_PENDING_USER_ACTION ->
-                            userAction = intent.getParcelableExtra(Intent.EXTRA_INTENT);
+                            userAction = getParcelableExtraCompat(intent, Intent.EXTRA_INTENT, Intent.class);
                     case STATUS_SUCCESS -> {
                         if (packageName == null) {
                             onSuccess(context);
@@ -125,6 +127,14 @@ public final class APKInstall {
                 }
                 latch.countDown();
             }
+        }
+
+        private static <T> T getParcelableExtraCompat(Intent intent, String key, Class<T> type) {
+            var extras = intent.getExtras();
+            if (extras == null) {
+                return null;
+            }
+            return BundleCompat.getParcelable(extras, key, type);
         }
 
         private void onSuccess(Context context) {

@@ -8,17 +8,22 @@ import android.content.pm.ApplicationInfo
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.os.IBinder
+import android.os.SystemClock
 import android.os.UserManager
 import android.system.Os
 import androidx.core.content.getSystemService
+import io.github.seyud.weave.core.AppContext
 import io.github.seyud.weave.core.Const
 import io.github.seyud.weave.core.Info
+import io.github.seyud.weave.core.intent
 import com.topjohnwu.superuser.Shell
 import com.topjohnwu.superuser.ShellUtils
+import com.topjohnwu.superuser.internal.UiThreadHandler
 import com.topjohnwu.superuser.ipc.RootService
 import com.topjohnwu.superuser.nio.FileSystemManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import rikka.parcelablelist.ParcelableListSlice
 import timber.log.Timber
 import java.io.File
 import java.util.concurrent.locks.AbstractQueuedSynchronizer
@@ -53,7 +58,7 @@ class RootUtils(stub: Any?) : RootService() {
             override fun addSystemlessHosts() = safe(false) { addSystemlessHostsImpl() }
             override fun getInstalledApplications(flags: Int) = safe(emptyList()) { getInstalledApplicationsImpl(flags) }
             override fun getUserIds() = safe(intArrayOf(0)) { getAllUserIds() }
-            override fun getPackages(flags: Int) = safe(emptyList()) { getPackagesImpl(flags) }
+            override fun getPackages(flags: Int) = ParcelableListSlice(safe(emptyList()) { getPackagesImpl(flags) })
         }
     }
 
@@ -99,7 +104,6 @@ class RootUtils(stub: Any?) : RootService() {
         return true
     }
 
-    @Suppress("UNCHECKED_CAST")
     private fun getInstalledApplicationsAsUser(flags: Int, userId: Int): List<ApplicationInfo> {
         return try {
             val pm: PackageManager = packageManager
@@ -108,7 +112,7 @@ class RootUtils(stub: Any?) : RootService() {
                 Int::class.javaPrimitiveType,
                 Int::class.javaPrimitiveType
             )
-            method.invoke(pm, flags, userId) as List<ApplicationInfo>
+            method.invoke(pm, flags, userId).toTypedList()
         } catch (e: Throwable) {
             Timber.e(e, "getInstalledApplicationsAsUser reflection failed")
             emptyList()
@@ -156,7 +160,6 @@ class RootUtils(stub: Any?) : RootService() {
      * Get installed packages for a specific user via reflection.
      * This bypasses the QUERY_ALL_PACKAGES permission requirement.
      */
-    @Suppress("UNCHECKED_CAST")
     private fun getInstalledPackagesAsUser(flags: Int, userId: Int): List<PackageInfo> {
         return try {
             val pm: PackageManager = packageManager
@@ -165,7 +168,7 @@ class RootUtils(stub: Any?) : RootService() {
                 Int::class.javaPrimitiveType,
                 Int::class.javaPrimitiveType
             )
-            method.invoke(pm, flags, userId) as List<PackageInfo>
+            method.invoke(pm, flags, userId).toTypedList()
         } catch (e: Throwable) {
             Timber.e(e, "getInstalledPackagesAsUser reflection failed")
             emptyList()
@@ -192,7 +195,7 @@ class RootUtils(stub: Any?) : RootService() {
         override fun onServiceConnected(name: ComponentName, service: IBinder) {
             Timber.d("onServiceConnected")
             IRootUtils.Stub.asInterface(service).let {
-                obj = it
+                remoteService = it
                 fs = FileSystemManager.getRemote(it.fileSystem)
             }
             releaseShared(1)
@@ -200,7 +203,7 @@ class RootUtils(stub: Any?) : RootService() {
 
         override fun onServiceDisconnected(name: ComponentName) {
             state = 1
-            obj = null
+            remoteService = null
             bind(Intent().setComponent(name), this)
         }
 
@@ -227,6 +230,8 @@ class RootUtils(stub: Any?) : RootService() {
                 throw IllegalStateException("Cannot await on the main thread")
             }
         }
+
+        fun isReady(): Boolean = state == 0
     }
 
     companion object {
@@ -237,10 +242,12 @@ class RootUtils(stub: Any?) : RootService() {
                 return field
             }
             private set
-        private var obj: IRootUtils? = null
+        @Volatile
+        private var remoteService: IRootUtils? = null
+        private val obj: IRootUtils?
             get() {
                 Connection.await()
-                return field
+                return remoteService
             }
 
         fun getAppProcess(pid: Int) = safe(null) { obj?.getAppProcess(pid) }
@@ -256,9 +263,51 @@ class RootUtils(stub: Any?) : RootService() {
          * This bypasses the QUERY_ALL_PACKAGES permission requirement on Android 11+.
          */
         fun getPackages(flags: Int): List<PackageInfo> =
-            safe(emptyList()) { obj?.getPackages(flags) ?: emptyList() }
+            safe(emptyList()) { obj?.getPackages(flags)?.list?.filterIsInstance<PackageInfo>().orEmpty() }
 
         fun getUserIds(): IntArray = safe(intArrayOf(0)) { obj?.userIds ?: intArrayOf(0) }
+
+        fun isServiceConnected(): Boolean = Connection.isReady() && remoteService != null
+
+        fun ensureServiceConnected(timeoutMs: Long = ROOT_SERVICE_CONNECT_TIMEOUT_MS): Boolean {
+            if (isServiceConnected()) return true
+
+            val shell = runCatching { Shell.getShell() }
+                .onFailure { Timber.w(it, "Failed to acquire root shell for RootService") }
+                .getOrNull()
+                ?: return false
+
+            if (!shell.isRoot) {
+                return false
+            }
+
+            val task = bindTask ?: RootService.bindOrTask(
+                AppContext.intent<RootUtils>(),
+                UiThreadHandler.executor,
+                Connection,
+            )
+            bindTask = null
+            runCatching {
+                task?.let { shell.execTask(it) }
+            }.onFailure {
+                Timber.w(it, "Failed to execute RootService bind task")
+            }
+
+            val deadline = SystemClock.elapsedRealtime() + timeoutMs
+            while (SystemClock.elapsedRealtime() < deadline) {
+                if (isServiceConnected()) {
+                    return true
+                }
+                try {
+                    Thread.sleep(ROOT_SERVICE_POLL_INTERVAL_MS)
+                } catch (_: InterruptedException) {
+                    Thread.currentThread().interrupt()
+                    break
+                }
+            }
+
+            return isServiceConnected()
+        }
 
         private inline fun <T> safe(default: T, block: () -> T): T {
             return try {
@@ -269,5 +318,13 @@ class RootUtils(stub: Any?) : RootService() {
                 default
             }
         }
+
+        private const val ROOT_SERVICE_CONNECT_TIMEOUT_MS = 1_500L
+        private const val ROOT_SERVICE_POLL_INTERVAL_MS = 50L
     }
+}
+
+private inline fun <reified T> Any?.toTypedList(): List<T> {
+    val rawList = this as? List<*> ?: return emptyList()
+    return rawList.filterIsInstance<T>()
 }

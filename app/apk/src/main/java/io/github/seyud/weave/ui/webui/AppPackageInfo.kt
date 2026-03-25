@@ -13,6 +13,8 @@ import androidx.core.content.pm.PackageInfoCompat
 import androidx.core.graphics.createBitmap
 import androidx.core.graphics.scale
 import io.github.seyud.weave.core.ktx.getLabel
+import io.github.seyud.weave.core.utils.InstalledItemSource
+import io.github.seyud.weave.core.utils.InstalledPackageLoader
 import io.github.seyud.weave.core.utils.RootUtils
 import org.json.JSONArray
 import org.json.JSONObject
@@ -34,6 +36,8 @@ internal object WebUiPackageRegistry {
 
     @Volatile
     private var cachedApps: List<WebUiAppInfo>? = null
+    @Volatile
+    private var cachedSource: InstalledItemSource? = null
 
     fun listPackages(context: Context, type: String): String {
         val packageNames = loadApps(context)
@@ -105,16 +109,21 @@ internal object WebUiPackageRegistry {
      * Falls back to direct PackageManager call if RootService is unavailable.
      */
     private fun loadApps(context: Context): List<WebUiAppInfo> {
-        cachedApps?.let { return it }
+        cachedApps?.let { apps ->
+            val source = cachedSource
+            if (source == InstalledItemSource.ROOT) {
+                return apps
+            }
+            if (source == InstalledItemSource.FALLBACK && !RootUtils.isServiceConnected()) {
+                return apps
+            }
+        }
 
         val packageManager = context.packageManager
         val flags = PackageManager.MATCH_UNINSTALLED_PACKAGES
 
-        // Use RootService to get packages (bypasses QUERY_ALL_PACKAGES permission on Android 11+)
-        val packages = RootUtils.getPackages(flags).ifEmpty {
-            // Fallback: if RootService is unavailable, use normal PackageManager
-            packageManager.getInstalledPackages(flags)
-        }
+        val result = InstalledPackageLoader.loadPackages(flags, packageManager)
+        val packages = result.items
 
         val apps = packages
             .map { packageInfo ->
@@ -124,6 +133,7 @@ internal object WebUiPackageRegistry {
             .sortedWith(compareBy(packageNameComparator) { it.packageName })
 
         cachedApps = apps
+        cachedSource = result.source
         return apps
     }
 
