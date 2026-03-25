@@ -300,6 +300,21 @@ public class DynLoad {
     }
 
     private static String activityKey(ActivityInfo info) {
-        return info.exported + ":" + info.directBootAware;
+        return info.exported + ":"
+                + info.directBootAware + ":"
+                + info.configChanges + ":"
+                + normalizeTaskAffinity(info);
+    }
+
+    private static String normalizeTaskAffinity(ActivityInfo info) {
+        var affinity = info.taskAffinity;
+        if (affinity == null) {
+            return "<null>";
+        }
+        var pkg = info.packageName;
+        if (pkg != null && affinity.equals(pkg)) {
+            return "<default>";
+        }
+        return affinity;
     }
 }

@@ -13,8 +13,8 @@ android {
     namespace = "io.github.seyud.weave"
 
     val canary = !Config.version.contains(".")
-    val base = "https://github.com/topjohnwu/Magisk/releases/download/"
-    val url = base + "v${Config.version}/Magisk-v${Config.version}.apk"
+    val base = "https://github.com/Seyud/WeaveMask/releases/download/"
+    val url = base + "v${Config.version}/app-release.apk"
     val canaryUrl = base + "canary-${Config.versionCode}/"
 
     defaultConfig {

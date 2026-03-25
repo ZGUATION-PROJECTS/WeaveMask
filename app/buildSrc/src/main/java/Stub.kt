@@ -146,6 +146,7 @@ private abstract class ManifestUpdater: DefaultTask() {
         cmpList.add("""
             |<activity
             |    android:name="x.COMPONENT_PLACEHOLDER_2"
+            |    android:excludeFromRecents="true"
             |    android:exported="true">
             |    <intent-filter>
             |        <action android:name="android.intent.action.MAIN" />
