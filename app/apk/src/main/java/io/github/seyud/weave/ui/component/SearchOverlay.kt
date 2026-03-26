@@ -48,9 +48,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
@@ -111,26 +112,24 @@ data class SearchStatus(
         hazeStyle: HazeStyle? = null,
         content: @Composable () -> Unit
     ) {
+        val surfaceColor = colorScheme.surface
         val topAppBarAlpha = animateFloatAsState(
             if (visible) 1f else 0f,
             animationSpec = tween(if (visible) 550 else 0, easing = FastOutSlowInEasing),
             label = "TopAppBarAlpha"
         )
-        Box(modifier = modifier) {
-            Box(
-                modifier = Modifier
-                    .matchParentSize()
-                    .then(
-                        if (hazeState != null && hazeStyle != null) {
-                            Modifier.defaultHazeEffect(hazeState, hazeStyle)
-                        } else {
-                            Modifier.background(colorScheme.surface)
-                        }
-                    )
+        Box(
+            modifier = modifier.then(
+                if (hazeState != null && hazeStyle != null) {
+                    Modifier.defaultHazeEffect(hazeState, hazeStyle)
+                } else {
+                    Modifier.drawBehind { drawRect(surfaceColor) }
+                }
             )
+        ) {
             Box(
                 modifier = Modifier
-                    .alpha(topAppBarAlpha.value)
+                    .graphicsLayer { alpha = topAppBarAlpha.value }
                     .then(if (visible) Modifier else Modifier.pointerInput(Unit) { })
             ) {
                 content()
@@ -156,6 +155,7 @@ fun SearchStatus.SearchBox(
 ) {
     val searchStatus = this
     val density = LocalDensity.current
+    val surfaceColor = colorScheme.surface
 
     val offsetY = remember { mutableIntStateOf(0) }
     val boxHeight = remember { mutableStateOf(0.dp) }
@@ -164,7 +164,9 @@ fun SearchStatus.SearchBox(
         modifier = Modifier
             .fillMaxWidth()
             .zIndex(10f)
-            .alpha(if (searchStatus.isCollapsed()) 1f else 0f)
+            .graphicsLayer {
+                alpha = if (searchStatus.isCollapsed()) 1f else 0f
+            }
             .offset(y = contentPadding.calculateTopPadding())
             .onGloballyPositioned {
                 it.positionInWindow().y.apply {
@@ -188,7 +190,7 @@ fun SearchStatus.SearchBox(
                 if (hazeState != null && hazeStyle != null) {
                     Modifier.defaultHazeEffect(hazeState, hazeStyle)
                 } else {
-                    Modifier.background(colorScheme.surface)
+                    Modifier.drawBehind { drawRect(surfaceColor) }
                 }
             )
     ) {
@@ -223,6 +225,7 @@ fun SearchStatus.SearchPager(
 ) {
     val searchStatus = this
     val systemBarsPadding = WindowInsets.systemBars.asPaddingValues().calculateTopPadding()
+    val surfaceColor = colorScheme.surface
     val topPadding by animateDpAsState(
         targetValue = if (searchStatus.shouldExpand()) systemBarsPadding + 5.dp else max(searchStatus.offsetY, 0.dp),
         animationSpec = tween(300, easing = LinearOutSlowInEasing),
@@ -240,7 +243,11 @@ fun SearchStatus.SearchPager(
         modifier = Modifier
             .fillMaxSize()
             .zIndex(5f)
-            .background(colorScheme.surface.copy(alpha = surfaceAlpha))
+            .drawBehind {
+                if (surfaceAlpha > 0f) {
+                    drawRect(surfaceColor, alpha = surfaceAlpha)
+                }
+            }
             .semantics { onClick { false } }
             .then(if (!searchStatus.isCollapsed()) Modifier.pointerInput(Unit) { } else Modifier)
     ) {
@@ -248,7 +255,11 @@ fun SearchStatus.SearchPager(
             Modifier
                 .fillMaxWidth()
                 .padding(top = topPadding)
-                .then(if (!searchStatus.isCollapsed()) Modifier.background(colorScheme.surface) else Modifier),
+                .drawBehind {
+                    if (!searchStatus.isCollapsed()) {
+                        drawRect(surfaceColor)
+                    }
+                },
             horizontalArrangement = Arrangement.Start,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -256,7 +267,7 @@ fun SearchStatus.SearchPager(
                 Box(
                     modifier = Modifier
                         .weight(1f)
-                        .background(colorScheme.surface)
+                        .drawBehind { drawRect(surfaceColor) }
                 ) {
                     expandBar(searchStatus, onSearchStatusChange, searchBarTopPadding)
                 }

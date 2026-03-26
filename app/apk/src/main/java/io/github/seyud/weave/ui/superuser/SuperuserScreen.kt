@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.VisibilityThreshold
@@ -22,6 +23,7 @@ import android.os.Process
 import androidx.compose.foundation.lazy.LazyListScope
 import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
@@ -35,8 +37,8 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -49,7 +51,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.zIndex
 import androidx.compose.ui.zIndex
 import androidx.core.graphics.drawable.toBitmap
 import io.github.seyud.weave.core.model.su.SuPolicy
@@ -79,11 +80,14 @@ import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.Switch
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TopAppBar
+import top.yukonga.miuix.kmp.basic.VerticalScrollBar
+import top.yukonga.miuix.kmp.basic.rememberScrollBarAdapter
 import top.yukonga.miuix.kmp.basic.rememberPullToRefreshState
 import top.yukonga.miuix.kmp.extra.SuperListPopup
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Delete
 import top.yukonga.miuix.kmp.icon.extended.MoreCircle
+import top.yukonga.miuix.kmp.interfaces.ExperimentalScrollBarApi
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.PressFeedbackType
 import top.yukonga.miuix.kmp.utils.overScrollVertical
@@ -140,14 +144,19 @@ fun SuperuserScreen(
 
     // 监听生命周期，当页面从后台返回前台时刷新数据
     val lifecycleOwner = LocalLifecycleOwner.current
-    LaunchedEffect(lifecycleOwner) {
+    DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 viewModel.refresh()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
-        // 初始加载
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    LaunchedEffect(hasStartedLoading) {
         if (!hasStartedLoading) {
             hasStartedLoading = true
             viewModel.startLoading()
@@ -212,6 +221,8 @@ fun SuperuserScreen(
                     TopAppBar(
                         color = if (enableBlur) Color.Transparent else MiuixTheme.colorScheme.surface,
                         title = context.getString(CoreR.string.superuser),
+                        titleColor = MiuixTheme.colorScheme.onBackground,
+                        largeTitleColor = MiuixTheme.colorScheme.onBackground,
                         scrollBehavior = scrollBehavior,
                         actions = {
                             SuperListPopup(
@@ -393,6 +404,7 @@ private fun EmptyContent(
  * @param hazeState Haze 模糊状态
  */
 @Composable
+@OptIn(ExperimentalScrollBarApi::class)
 private fun PolicyList(
     policies: List<PolicyCardUiState>,
     viewModel: SuperuserViewModel,
@@ -405,45 +417,57 @@ private fun PolicyList(
     onDelete: (String) -> Unit,
     nestedScrollConnection: NestedScrollConnection
 ) {
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .scrollEndHaptic()
-            .overScrollVertical()
-            .padding(horizontal = 16.dp)
-            .then(if (enableBlur) Modifier.hazeSource(state = hazeState) else Modifier)
-            .nestedScroll(nestedScrollConnection),
-        contentPadding = PaddingValues(top = topContentPadding, bottom = contentBottomPadding),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-        overscrollEffect = null
-    ) {
-        itemsIndexed(
-            items = policies,
-            key = { _, it -> it.key },
-            contentType = { _, _ -> "policy_item" }
-        ) { index, policyItem ->
-            val policyKey = policyItem.key
-            PolicyItem(
-                item = policyItem,
-                isExpanded = expandedPolicyKeys.contains(policyKey),
-                onToggleExpanded = { onToggleExpanded(policyKey) },
-                onDelete = { onDelete(policyKey) },
-                onUpdateNotify = { viewModel.toggleNotifyByKey(policyKey) },
-                onUpdateLogging = { viewModel.toggleLogByKey(policyKey) },
-                onUpdatePolicy = { policy -> viewModel.updatePolicyByKey(policyKey, policy) },
-                modifier = Modifier
-                    .zIndex(-index.toFloat())
-                    .animateItem(
-                        fadeInSpec = null,
-                        fadeOutSpec = null,
-                        placementSpec = spring(
-                            stiffness = Spring.StiffnessMediumLow,
-                            visibilityThreshold = IntOffset.VisibilityThreshold
+    val listState = rememberLazyListState()
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        LazyColumn(
+            state = listState,
+            modifier = Modifier
+                .fillMaxSize()
+                .scrollEndHaptic()
+                .overScrollVertical()
+                .padding(horizontal = 16.dp)
+                .then(if (enableBlur) Modifier.hazeSource(state = hazeState) else Modifier)
+                .nestedScroll(nestedScrollConnection),
+            contentPadding = PaddingValues(top = topContentPadding, bottom = contentBottomPadding),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            overscrollEffect = null
+        ) {
+            itemsIndexed(
+                items = policies,
+                key = { _, it -> it.key },
+                contentType = { _, _ -> "policy_item" }
+            ) { index, policyItem ->
+                val policyKey = policyItem.key
+                PolicyItem(
+                    item = policyItem,
+                    isExpanded = expandedPolicyKeys.contains(policyKey),
+                    onToggleExpanded = { onToggleExpanded(policyKey) },
+                    onDelete = { onDelete(policyKey) },
+                    onUpdateNotify = { viewModel.toggleNotifyByKey(policyKey) },
+                    onUpdateLogging = { viewModel.toggleLogByKey(policyKey) },
+                    onUpdatePolicy = { policy -> viewModel.updatePolicyByKey(policyKey, policy) },
+                    modifier = Modifier
+                        .zIndex(-index.toFloat())
+                        .animateItem(
+                            fadeInSpec = null,
+                            fadeOutSpec = null,
+                            placementSpec = spring(
+                                stiffness = Spring.StiffnessMediumLow,
+                                visibilityThreshold = IntOffset.VisibilityThreshold
+                            )
                         )
-                    )
-            )
+                )
+            }
         }
 
+        VerticalScrollBar(
+            adapter = rememberScrollBarAdapter(listState),
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .fillMaxHeight(),
+            trackPadding = PaddingValues(top = topContentPadding, bottom = contentBottomPadding),
+        )
     }
 }
 
@@ -501,7 +525,7 @@ private fun PolicyItem(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .alpha(cardAlpha),
+            .graphicsLayer { alpha = cardAlpha },
         cornerRadius = 12.dp,
         onClick = onToggleExpanded,
         pressFeedbackType = PressFeedbackType.Sink

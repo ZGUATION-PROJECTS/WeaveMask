@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import top.yukonga.miuix.kmp.basic.Text
@@ -29,7 +30,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
@@ -37,6 +37,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -70,8 +71,10 @@ import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.Switch
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TopAppBar
+import top.yukonga.miuix.kmp.basic.VerticalScrollBar
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.rememberPullToRefreshState
+import top.yukonga.miuix.kmp.basic.rememberScrollBarAdapter
 import top.yukonga.miuix.kmp.extra.SuperListPopup
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Download
@@ -80,6 +83,7 @@ import top.yukonga.miuix.kmp.icon.extended.UploadCloud
 import top.yukonga.miuix.kmp.icon.extended.Delete
 import top.yukonga.miuix.kmp.icon.extended.Undo
 import top.yukonga.miuix.kmp.icon.extended.Play
+import top.yukonga.miuix.kmp.interfaces.ExperimentalScrollBarApi
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.PressFeedbackType
 import top.yukonga.miuix.kmp.utils.overScrollVertical
@@ -281,6 +285,8 @@ fun ModuleScreen(
                     TopAppBar(
                         color = if (enableBlur) Color.Transparent else MiuixTheme.colorScheme.surface,
                         title = context.getString(CoreR.string.modules),
+                        titleColor = MiuixTheme.colorScheme.onBackground,
+                        largeTitleColor = MiuixTheme.colorScheme.onBackground,
                         scrollBehavior = scrollBehavior,
                         actions = {
                             SuperListPopup(
@@ -489,6 +495,7 @@ private fun EmptyContent(
  * @param modifier Modifier
  */
 @Composable
+@OptIn(ExperimentalScrollBarApi::class)
 private fun ModuleList(
     viewModel: ModuleViewModel,
     modules: List<ModuleInfo>,
@@ -500,31 +507,44 @@ private fun ModuleList(
     contentBottomPadding: Dp,
     modifier: Modifier = Modifier
 ) {
-    LazyColumn(
-        modifier = modifier
-            .fillMaxSize()
-            .scrollEndHaptic()
-            .overScrollVertical()
-            .padding(horizontal = 16.dp)
-            .then(if (enableBlur) Modifier.hazeSource(state = hazeState) else Modifier),
-        contentPadding = PaddingValues(top = topContentPadding, bottom = contentBottomPadding),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-        overscrollEffect = null
-    ) {
-        item {
-            InstallModuleEntryButton(onClick = onInstallPressed)
+    val listState = rememberLazyListState()
+
+    Box(modifier = modifier.fillMaxSize()) {
+        LazyColumn(
+            state = listState,
+            modifier = Modifier
+                .fillMaxSize()
+                .scrollEndHaptic()
+                .overScrollVertical()
+                .padding(horizontal = 16.dp)
+                .then(if (enableBlur) Modifier.hazeSource(state = hazeState) else Modifier),
+            contentPadding = PaddingValues(top = topContentPadding, bottom = contentBottomPadding),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            overscrollEffect = null
+        ) {
+            item {
+                InstallModuleEntryButton(onClick = onInstallPressed)
+            }
+
+            items(
+                items = modules,
+                key = { it.id }
+            ) { module ->
+                ModuleItem(
+                    module = module,
+                    viewModel = viewModel,
+                    onOpenWebUi = onOpenWebUi
+                )
+            }
         }
 
-        items(
-            items = modules,
-            key = { it.id }
-        ) { module ->
-            ModuleItem(
-                module = module,
-                viewModel = viewModel,
-                onOpenWebUi = onOpenWebUi
-            )
-        }
+        VerticalScrollBar(
+            adapter = rememberScrollBarAdapter(listState),
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .fillMaxHeight(),
+            trackPadding = PaddingValues(top = topContentPadding, bottom = contentBottomPadding),
+        )
     }
 }
 
@@ -598,7 +618,7 @@ private fun ModuleItem(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .alpha(cardAlpha),
+            .graphicsLayer { alpha = cardAlpha },
         cornerRadius = 12.dp,
         insideMargin = PaddingValues(16.dp),
         pressFeedbackType = PressFeedbackType.Sink,

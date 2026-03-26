@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.add
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -72,9 +73,12 @@ import top.yukonga.miuix.kmp.basic.TabRow
 import top.yukonga.miuix.kmp.basic.TabRowDefaults
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TopAppBar
+import top.yukonga.miuix.kmp.basic.VerticalScrollBar
+import top.yukonga.miuix.kmp.basic.rememberScrollBarAdapter
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.icon.extended.Delete
+import top.yukonga.miuix.kmp.interfaces.ExperimentalScrollBarApi
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.PressFeedbackType
 import kotlinx.coroutines.launch
@@ -127,6 +131,8 @@ fun LogScreen(
                     Modifier
                 },
                 title = context.getString(CoreR.string.logs),
+                titleColor = MiuixTheme.colorScheme.onBackground,
+                largeTitleColor = MiuixTheme.colorScheme.onBackground,
                 color = if (enableBlur) Color.Transparent else MiuixTheme.colorScheme.surface,
                 navigationIcon = {
                     IconButton(
@@ -257,6 +263,7 @@ fun LogScreen(
 }
 
 @Composable
+@OptIn(ExperimentalScrollBarApi::class)
 private fun SuLogTab(
     suLogs: List<SuLog>,
     scrollBehavior: top.yukonga.miuix.kmp.basic.ScrollBehavior,
@@ -274,21 +281,34 @@ private fun SuLogTab(
         return
     }
 
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .nestedScroll(scrollBehavior.nestedScrollConnection)
-            .padding(start = startPadding, end = endPadding)
-            .then(if (enableBlur) Modifier.hazeSource(hazeState) else Modifier),
-        contentPadding = PaddingValues(top = topPadding, bottom = bottomPadding),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        items(
-            items = suLogs,
-            key = { it.id },
-        ) { log ->
-            SuLogCard(log)
+    val listState = rememberLazyListState()
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        LazyColumn(
+            state = listState,
+            modifier = Modifier
+                .fillMaxSize()
+                .nestedScroll(scrollBehavior.nestedScrollConnection)
+                .padding(start = startPadding, end = endPadding)
+                .then(if (enableBlur) Modifier.hazeSource(hazeState) else Modifier),
+            contentPadding = PaddingValues(top = topPadding, bottom = bottomPadding),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            items(
+                items = suLogs,
+                key = { it.id },
+            ) { log ->
+                SuLogCard(log)
+            }
         }
+
+        VerticalScrollBar(
+            adapter = rememberScrollBarAdapter(listState),
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .fillMaxHeight(),
+            trackPadding = PaddingValues(top = topPadding, bottom = bottomPadding),
+        )
     }
 }
 
@@ -385,6 +405,7 @@ private fun SuLogCard(log: SuLog) {
 }
 
 @Composable
+@OptIn(ExperimentalScrollBarApi::class)
 private fun MagiskLogTab(
     entries: List<MagiskLogEntry>,
     scrollBehavior: top.yukonga.miuix.kmp.basic.ScrollBehavior,
@@ -404,19 +425,29 @@ private fun MagiskLogTab(
 
     val listState = rememberLazyListState()
 
-    LazyColumn(
-        state = listState,
-        modifier = Modifier
-            .fillMaxSize()
-            .nestedScroll(scrollBehavior.nestedScrollConnection)
-            .padding(start = startPadding, end = endPadding)
-            .then(if (enableBlur) Modifier.hazeSource(hazeState) else Modifier),
-        contentPadding = PaddingValues(top = topPadding, bottom = bottomPadding),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        items(entries.size, key = { it }) { index ->
-            MagiskLogCard(entry = entries[index])
+    Box(modifier = Modifier.fillMaxSize()) {
+        LazyColumn(
+            state = listState,
+            modifier = Modifier
+                .fillMaxSize()
+                .nestedScroll(scrollBehavior.nestedScrollConnection)
+                .padding(start = startPadding, end = endPadding)
+                .then(if (enableBlur) Modifier.hazeSource(hazeState) else Modifier),
+            contentPadding = PaddingValues(top = topPadding, bottom = bottomPadding),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            items(entries.size, key = { it }) { index ->
+                MagiskLogCard(entry = entries[index])
+            }
         }
+
+        VerticalScrollBar(
+            adapter = rememberScrollBarAdapter(listState),
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .fillMaxHeight(),
+            trackPadding = PaddingValues(top = topPadding, bottom = bottomPadding),
+        )
     }
 }
 

@@ -223,6 +223,9 @@ fun MainScreen(
     var rememberedMainTab by rememberSaveable {
         mutableIntStateOf(initialMainTab.coerceIn(0, 3))
     }
+    val currentRoute by remember(navigator) {
+        derivedStateOf { navigator.current() }
+    }
 
     // 处理来自下载完成通知的 flash 导航请求
     LaunchedEffect(pendingFlashAction) {
@@ -271,8 +274,8 @@ fun MainScreen(
         )
     }
 
-    LaunchedEffect(navigator.current()) {
-        if (navigator.current() !is Route.Main) {
+    LaunchedEffect(currentRoute) {
+        if (currentRoute !is Route.Main) {
             snackbarBottomPadding = 0.dp
         }
     }
@@ -414,11 +417,17 @@ private fun MainTabScreen(
         pageCount = { 4 }
     )
     val mainPagerState = rememberMainPagerState(pagerState)
+    val currentPage by remember(pagerState) {
+        derivedStateOf { pagerState.currentPage }
+    }
+    val isAtMainRoot by remember(navigator) {
+        derivedStateOf { navigator.backStack.size == 1 && navigator.current() is Route.Main }
+    }
 
     // Navigation3 back handler
-    val isPagerBackHandlerEnabled by remember {
+    val isPagerBackHandlerEnabled by remember(navigator, mainPagerState) {
         derivedStateOf {
-            navigator.current() is Route.Main && navigator.backStackSize() == 1 && mainPagerState.selectedPage != 0
+            isAtMainRoot && mainPagerState.selectedPage != 0
         }
     }
 
@@ -432,9 +441,9 @@ private fun MainTabScreen(
     )
 
     // 手势滑动 Pager 后同步选中态到底部栏
-    LaunchedEffect(mainPagerState.pagerState.currentPage) {
+    LaunchedEffect(currentPage) {
         mainPagerState.syncPage()
-        onCurrentTabChanged(mainPagerState.pagerState.currentPage)
+        onCurrentTabChanged(currentPage)
     }
 
     val destinations = BottomBarDestination.entries
@@ -552,7 +561,7 @@ private fun MainTabScreen(
                     else Modifier
                 )
         ) { page ->
-            val isCurrentPage = page == mainPagerState.pagerState.currentPage
+            val isCurrentPage = page == currentPage
             when (page) {
                 0 -> if (isCurrentPage || contentReady) HomeScreen(
                     viewModel = homeViewModel,
