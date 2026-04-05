@@ -19,5 +19,4 @@ gradlePlugin {
 dependencies {
     implementation(kotlin("gradle-plugin", libs.versions.kotlin.get()))
     implementation(libs.android.gradle.plugin)
-    implementation(libs.jgit)
 }
