@@ -36,7 +36,7 @@ dependencies {
     implementation(libs.material)
 
     // Compose BOM
-    implementation(platform("androidx.compose:compose-bom:2026.03.00"))
+    implementation(platform("androidx.compose:compose-bom:2026.03.01"))
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")
@@ -59,10 +59,10 @@ dependencies {
     implementation(libs.miuix.preference)
     implementation(libs.miuix.icons)
     implementation(libs.miuix.blur)
+    implementation(libs.miuix.shapes)
 
     // Backdrop (Liquid Glass)
     implementation(libs.backdrop)
-    implementation(libs.capsule)
 
     // WebKit (WebViewAssetLoader)
     implementation("androidx.webkit:webkit:1.13.0")

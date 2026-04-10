@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -58,7 +59,6 @@ import com.kyant.backdrop.effects.vibrancy
 import com.kyant.backdrop.highlight.Highlight
 import com.kyant.backdrop.shadow.InnerShadow
 import com.kyant.backdrop.shadow.Shadow
-import com.kyant.capsule.ContinuousCapsule
 import io.github.seyud.weave.ui.animation.DampedDragAnimation
 import io.github.seyud.weave.ui.animation.InteractiveHighlight
 import kotlinx.coroutines.flow.collectLatest
@@ -79,7 +79,7 @@ fun RowScope.FloatingBottomBarItem(
     val scale = LocalFloatingBottomBarTabScale.current
     Column(
         modifier
-            .clip(ContinuousCapsule)
+            .clip(CircleShape)
             .clickable(
                 interactionSource = null,
                 indication = null,
@@ -235,7 +235,7 @@ fun FloatingBottomBar(
                 )
                 .drawBackdrop(
                     backdrop = backdrop,
-                    shape = { ContinuousCapsule },
+                    shape = { CircleShape },
                     effects = {
                         if (isBackdropBlurEnabled) {
                             blur(8f.dp.toPx())
@@ -284,7 +284,7 @@ fun FloatingBottomBar(
                     .graphicsLayer { translationX = panelOffset }
                     .drawBackdrop(
                         backdrop = backdrop,
-                        shape = { ContinuousCapsule },
+                        shape = { CircleShape },
                         effects = {
                             if (isBackdropBlurEnabled) {
                                 blur(8f.dp.toPx())
@@ -329,7 +329,7 @@ fun FloatingBottomBar(
                     .then(dampedDragAnimation.modifier)
                     .drawBackdrop(
                         backdrop = rememberCombinedBackdrop(backdrop, tabsBackdrop),
-                        shape = { ContinuousCapsule },
+                        shape = { CircleShape },
                         effects = {
                             if (isLiquidGlassEnabled) {
                                 val progress = dampedDragAnimation.pressProgress

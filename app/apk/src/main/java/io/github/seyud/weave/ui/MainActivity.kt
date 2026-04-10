@@ -211,6 +211,7 @@ class MainActivity : AppCompatActivity(), IActivityExtension, ViewModelHolder, W
             var enableBlur by remember { mutableStateOf(Config.enableBlur) }
             var enableFloatingBottomBar by remember { mutableStateOf(Config.enableFloatingBottomBar) }
             var enableFloatingBottomBarBlur by remember { mutableStateOf(Config.enableFloatingBottomBarBlur) }
+            var enableSmoothCorner by remember { mutableStateOf(Config.enableSmoothCorner) }
             var pageScale by remember { mutableFloatStateOf(Config.pageScale) }
 
             val darkMode = when (colorMode) {
@@ -232,6 +233,7 @@ class MainActivity : AppCompatActivity(), IActivityExtension, ViewModelHolder, W
                         Config.Key.ENABLE_BLUR -> enableBlur = Config.enableBlur
                         Config.Key.ENABLE_FLOATING_BOTTOM_BAR -> enableFloatingBottomBar = Config.enableFloatingBottomBar
                         Config.Key.ENABLE_FLOATING_BOTTOM_BAR_BLUR -> enableFloatingBottomBarBlur = Config.enableFloatingBottomBarBlur
+                        Config.Key.ENABLE_SMOOTH_CORNER -> enableSmoothCorner = Config.enableSmoothCorner
                         Config.Key.PAGE_SCALE -> pageScale = Config.pageScale
                     }
                 }
@@ -262,7 +264,11 @@ class MainActivity : AppCompatActivity(), IActivityExtension, ViewModelHolder, W
                 )
 
                 // 根 Scaffold 用于承载 overlay 弹层组件，使 OverlayDialog 等组件正确渲染
-                WeaveMagiskTheme(colorMode = colorMode, keyColor = keyColor) {
+                WeaveMagiskTheme(
+                    colorMode = colorMode,
+                    keyColor = keyColor,
+                    enableSmoothCorner = enableSmoothCorner,
+                ) {
                     Scaffold(modifier = Modifier.fillMaxSize()) {
                         MainScreen(
                             homeViewModel = homeViewModel,
@@ -280,15 +286,17 @@ class MainActivity : AppCompatActivity(), IActivityExtension, ViewModelHolder, W
                             },
                             externalZipUris = externalZipUris,
                             onExternalZipHandled = { externalZipUris = null },
-                            colorMode = colorMode,
-                            keyColor = keyColor,
                             snackbarHostState = snackbarHostState,
                             modifier = Modifier.fillMaxSize()
                         )
                     }
                 }
 
-                WeaveMagiskTheme(colorMode = colorMode, keyColor = keyColor) {
+                WeaveMagiskTheme(
+                    colorMode = colorMode,
+                    keyColor = keyColor,
+                    enableSmoothCorner = enableSmoothCorner,
+                ) {
                     MiuixConfirmDialog(
                         show = showAddShortcutDialog,
                         title = getString(CoreR.string.add_shortcut_title),
@@ -303,7 +311,11 @@ class MainActivity : AppCompatActivity(), IActivityExtension, ViewModelHolder, W
                     )
                 }
 
-                WeaveMagiskTheme(colorMode = colorMode, keyColor = keyColor) {
+                WeaveMagiskTheme(
+                    colorMode = colorMode,
+                    keyColor = keyColor,
+                    enableSmoothCorner = enableSmoothCorner,
+                ) {
                     WeaveDialogHostContent(
                         dialog = activeDialogs.firstOrNull()
                     )

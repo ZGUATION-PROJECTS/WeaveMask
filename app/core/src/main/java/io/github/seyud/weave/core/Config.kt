@@ -53,6 +53,7 @@ object Config : PreferenceConfig, DBConfig {
         const val ENABLE_BLUR = "enable_blur"
         const val ENABLE_FLOATING_BOTTOM_BAR = "enable_floating_bottom_bar"
         const val ENABLE_FLOATING_BOTTOM_BAR_BLUR = "enable_floating_bottom_bar_blur"
+        const val ENABLE_SMOOTH_CORNER = "enable_smooth_corner"
         const val ENABLE_PREDICTIVE_BACK = "enable_predictive_back"
         const val PAGE_SCALE = "page_scale"
 
@@ -123,6 +124,7 @@ object Config : PreferenceConfig, DBConfig {
     private var enableBlurPrefs by preference(Key.ENABLE_BLUR, true)
     var enableFloatingBottomBar by preference(Key.ENABLE_FLOATING_BOTTOM_BAR, false)
     private var enableFloatingBottomBarBlurPrefs by preference(Key.ENABLE_FLOATING_BOTTOM_BAR_BLUR, false)
+    var enableSmoothCorner by preference(Key.ENABLE_SMOOTH_CORNER, true)
     var enablePredictiveBack by preference(Key.ENABLE_PREDICTIVE_BACK, false)
     var pageScale by preference(Key.PAGE_SCALE, 1.0f)
 

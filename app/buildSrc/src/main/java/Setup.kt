@@ -51,7 +51,7 @@ fun Project.setupCommon() {
                 minorApiLevel = 0
             }
         }
-        buildToolsVersion = "36.1.0"
+        buildToolsVersion = "37.0.0"
         ndkPath = "${androidComponents.sdkComponents.sdkDirectory.get().asFile}/ndk/magisk"
         ndkVersion = "29.0.14206865"
 
@@ -235,7 +235,7 @@ fun Project.setupAppCommon() {
         }
 
         defaultConfig {
-            targetSdk = 36
+            targetSdk = 37
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt")
             )

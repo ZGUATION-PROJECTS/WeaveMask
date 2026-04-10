@@ -87,7 +87,11 @@ class SuRequestActivity : ComponentActivity(), UntrackedActivity, IActivityExten
             val keyColorInt = Config.keyColor
             val keyColor = if (keyColorInt == 0) null else Color(keyColorInt)
 
-            WeaveMagiskTheme(colorMode = colorMode, keyColor = keyColor) {
+            WeaveMagiskTheme(
+                colorMode = colorMode,
+                keyColor = keyColor,
+                enableSmoothCorner = Config.enableSmoothCorner,
+            ) {
                 val dialogState by viewModel.dialogState.collectAsStateWithLifecycle()
 
                 SuRequestDialog(

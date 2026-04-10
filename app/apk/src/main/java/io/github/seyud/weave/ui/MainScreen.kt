@@ -42,7 +42,6 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -82,7 +81,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import kotlin.math.abs
@@ -121,7 +119,6 @@ import top.yukonga.miuix.kmp.basic.SnackbarHost
 import top.yukonga.miuix.kmp.basic.SnackbarHostState
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-import io.github.seyud.weave.ui.theme.WeaveMagiskTheme
 import io.github.seyud.weave.core.R as CoreR
 
 private val MainTabContentBottomSpacing = 12.dp
@@ -222,8 +219,6 @@ fun MainScreen(
     onPendingFlashRequestConsumed: () -> Unit = {},
     externalZipUris: List<ModuleInstallTarget>? = null,
     onExternalZipHandled: () -> Unit = {},
-    colorMode: Int = 0,
-    keyColor: Color? = null,
     snackbarHostState: SnackbarHostState,
     modifier: Modifier = Modifier
 ) {
@@ -276,118 +271,116 @@ fun MainScreen(
         }
     }
 
-    WeaveMagiskTheme(colorMode = colorMode, keyColor = keyColor) {
-        CompositionLocalProvider(
-            LocalNavigator provides navigator,
-        ) {
-            FlashIntentHandler(
-                pendingFlashRequest = pendingFlashRequest,
-                navigator = navigator,
-                onSelectMainTab = { rememberedMainTab = it.coerceIn(0, 3) },
-                onConsumed = onPendingFlashRequestConsumed,
-            )
-            Box(modifier = modifier.fillMaxSize()) {
-                ShortcutIntentHandler(intentVersion = intentVersion)
-                Scaffold(
-                    snackbarHost = {
-                        SnackbarHost(
-                            state = snackbarHostState,
-                            modifier = Modifier.padding(bottom = snackbarBottomPadding)
-                        )
-                    }
-                ) { _ ->
-                    NavDisplay(
-                        backStack = navigator.backStack,
-                        entryDecorators = listOf(
-                            rememberSaveableStateHolderNavEntryDecorator(),
-                            rememberViewModelStoreNavEntryDecorator()
-                        ),
-                        onBack = { navigator.pop() },
-                        modifier = Modifier.fillMaxSize(),
-                        entryProvider = entryProvider {
-                            entry<Route.Main> {
-                                MainTabScreen(
-                                    navigator = navigator,
-                                    homeViewModel = homeViewModel,
-                                    moduleViewModel = moduleViewModel,
-                                    superuserViewModel = superuserViewModel,
-                                    settingsViewModel = settingsViewModel,
-                                    logViewModel = logViewModel,
-                                    initialMainTab = rememberedMainTab,
-                                    onCurrentTabChanged = { rememberedMainTab = it },
-                                    onSnackbarBottomPaddingChanged = { snackbarBottomPadding = it }
-                                )
-                            }
-                            entry<Route.Install> {
-                                InstallScreen(
-                                    viewModel = installViewModel,
-                                    onNavigateBack = { navigator.pop() },
-                                    onNavigateToFlash = { action, uri ->
-                                        navigator.pop()
-                                        navigator.push(
-                                            Route.Flash(
-                                                action,
-                                                uri?.let { listOf(it.toString()) } ?: emptyList()
-                                            )
+    CompositionLocalProvider(
+        LocalNavigator provides navigator,
+    ) {
+        FlashIntentHandler(
+            pendingFlashRequest = pendingFlashRequest,
+            navigator = navigator,
+            onSelectMainTab = { rememberedMainTab = it.coerceIn(0, 3) },
+            onConsumed = onPendingFlashRequestConsumed,
+        )
+        Box(modifier = modifier.fillMaxSize()) {
+            ShortcutIntentHandler(intentVersion = intentVersion)
+            Scaffold(
+                snackbarHost = {
+                    SnackbarHost(
+                        state = snackbarHostState,
+                        modifier = Modifier.padding(bottom = snackbarBottomPadding)
+                    )
+                }
+            ) { _ ->
+                NavDisplay(
+                    backStack = navigator.backStack,
+                    entryDecorators = listOf(
+                        rememberSaveableStateHolderNavEntryDecorator(),
+                        rememberViewModelStoreNavEntryDecorator()
+                    ),
+                    onBack = { navigator.pop() },
+                    modifier = Modifier.fillMaxSize(),
+                    entryProvider = entryProvider {
+                        entry<Route.Main> {
+                            MainTabScreen(
+                                navigator = navigator,
+                                homeViewModel = homeViewModel,
+                                moduleViewModel = moduleViewModel,
+                                superuserViewModel = superuserViewModel,
+                                settingsViewModel = settingsViewModel,
+                                logViewModel = logViewModel,
+                                initialMainTab = rememberedMainTab,
+                                onCurrentTabChanged = { rememberedMainTab = it },
+                                onSnackbarBottomPaddingChanged = { snackbarBottomPadding = it }
+                            )
+                        }
+                        entry<Route.Install> {
+                            InstallScreen(
+                                viewModel = installViewModel,
+                                onNavigateBack = { navigator.pop() },
+                                onNavigateToFlash = { action, uri ->
+                                    navigator.pop()
+                                    navigator.push(
+                                        Route.Flash(
+                                            action,
+                                            uri?.let { listOf(it.toString()) } ?: emptyList()
                                         )
-                                    }
-                                )
-                            }
-                            entry<Route.Flash> { key ->
-                                val uriArgs = key.uriStrings
-                                    .filter { it.isNotEmpty() }
-                                    .map(Uri::parse)
+                                    )
+                                }
+                            )
+                        }
+                        entry<Route.Flash> { key ->
+                            val uriArgs = key.uriStrings
+                                .filter { it.isNotEmpty() }
+                                .map(Uri::parse)
 
-                                DisposableEffect(key.action) {
-                                    onDispose {
-                                        if (key.action == Const.Value.FLASH_ZIP) {
-                                            moduleViewModel.refresh()
-                                        }
+                            DisposableEffect(key.action) {
+                                onDispose {
+                                    if (key.action == Const.Value.FLASH_ZIP) {
+                                        moduleViewModel.refresh()
                                     }
                                 }
+                            }
 
-                                FlashScreen(
-                                    viewModel = flashViewModel,
-                                    action = key.action,
-                                    additionalData = uriArgs,
-                                    onNavigateBack = { navigator.pop() }
-                                )
-                            }
-                            entry<Route.Log> {
-                                LogScreen(
-                                    viewModel = logViewModel,
-                                    onNavigateBack = { navigator.pop() }
-                                )
-                            }
-                            entry<Route.AppLanguage> {
-                                AppLanguageScreen(
-                                    onNavigateBack = { navigator.pop() }
-                                )
-                            }
-                            entry<Route.Deny> {
-                                DenyListScreen(
-                                    onNavigateBack = { navigator.pop() }
-                                )
-                            }
-                            entry<Route.Action> { key ->
-                                ActionScreen(
-                                    moduleId = key.moduleId,
-                                    moduleName = key.moduleName,
-                                    fromShortcut = key.fromShortcut,
-                                    onNavigateBack = { navigator.pop() }
-                                )
-                            }
+                            FlashScreen(
+                                viewModel = flashViewModel,
+                                action = key.action,
+                                additionalData = uriArgs,
+                                onNavigateBack = { navigator.pop() }
+                            )
                         }
-                    )
-                }
+                        entry<Route.Log> {
+                            LogScreen(
+                                viewModel = logViewModel,
+                                onNavigateBack = { navigator.pop() }
+                            )
+                        }
+                        entry<Route.AppLanguage> {
+                            AppLanguageScreen(
+                                onNavigateBack = { navigator.pop() }
+                            )
+                        }
+                        entry<Route.Deny> {
+                            DenyListScreen(
+                                onNavigateBack = { navigator.pop() }
+                            )
+                        }
+                        entry<Route.Action> { key ->
+                            ActionScreen(
+                                moduleId = key.moduleId,
+                                moduleName = key.moduleName,
+                                fromShortcut = key.fromShortcut,
+                                onNavigateBack = { navigator.pop() }
+                            )
+                        }
+                    }
+                )
+            }
 
-                if (pendingFlashRequest != null) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(MiuixTheme.colorScheme.background)
-                    )
-                }
+            if (pendingFlashRequest != null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MiuixTheme.colorScheme.background)
+                )
             }
         }
     }
@@ -438,8 +431,8 @@ private fun ShortcutIntentHandler(
 
 /**
  * 主 Tab 页面
- * 使用 HorizontalPager 实现 Tab 切换，固定 beyondViewportPageCount
- * 导航转场动画完成后才预渲染其他页面（rememberContentReady）
+ * 使用 HorizontalPager 实现 Tab 切换
+ * 导航转场动画完成后再预渲染其他页面（rememberContentReady）
  */
 @Composable
 private fun MainTabScreen(
@@ -470,8 +463,8 @@ private fun MainTabScreen(
         pageCount = { 4 }
     )
     val mainPagerState = rememberMainPagerState(pagerState)
-    val currentPage by remember(pagerState) {
-        derivedStateOf { pagerState.currentPage }
+    val settledPage by remember(pagerState) {
+        derivedStateOf { pagerState.settledPage }
     }
     var lastAppliedTabRequest by remember { mutableIntStateOf(initialMainTab.coerceIn(0, 3)) }
     val isAtMainRoot by remember(navigator) {
@@ -494,15 +487,15 @@ private fun MainTabScreen(
         }
     )
 
+    LaunchedEffect(pagerState.currentPage) {
+        mainPagerState.syncPage()
+    }
+
     // 仅在页面落稳后回传到父层，避免动画过程中的状态回灌。
     LaunchedEffect(pagerState) {
-        snapshotFlow {
-            if (pagerState.currentPageOffsetFraction == 0f) pagerState.currentPage else null
-        }
-            .filterNotNull()
+        snapshotFlow { pagerState.settledPage }
             .distinctUntilChanged()
             .collect { settledPage ->
-                mainPagerState.syncPage()
                 if (settledPage != lastAppliedTabRequest) {
                     lastAppliedTabRequest = settledPage
                     onCurrentTabChanged(settledPage)
@@ -512,13 +505,13 @@ private fun MainTabScreen(
 
     LaunchedEffect(initialMainTab) {
         val targetPage = initialMainTab.coerceIn(0, 3)
-        if (targetPage == lastAppliedTabRequest) return@LaunchedEffect
+        if (targetPage == lastAppliedTabRequest && targetPage == pagerState.settledPage) return@LaunchedEffect
 
         lastAppliedTabRequest = targetPage
         if (targetPage != pagerState.currentPage) {
             pagerState.scrollToPage(targetPage)
-            mainPagerState.syncPage()
         }
+        mainPagerState.syncPage()
     }
 
     val destinations = BottomBarDestination.entries
@@ -637,7 +630,7 @@ private fun MainTabScreen(
                 userScrollEnabled = true,
                 modifier = Modifier.fillMaxSize(),
             ) { page ->
-                val isCurrentPage = page == currentPage
+                val isCurrentPage = page == settledPage
                 when (page) {
                     0 -> if (isCurrentPage || contentReady) HomeScreen(
                         viewModel = homeViewModel,

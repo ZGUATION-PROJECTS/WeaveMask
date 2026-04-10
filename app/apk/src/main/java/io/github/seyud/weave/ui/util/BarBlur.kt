@@ -6,6 +6,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.platform.LocalDensity
 import top.yukonga.miuix.kmp.blur.BlendColorEntry
 import top.yukonga.miuix.kmp.blur.BlurColors
 import top.yukonga.miuix.kmp.blur.LayerBackdrop
@@ -22,17 +23,19 @@ fun rememberBarBlurBackdrop(
     enabled: Boolean,
     surfaceColor: Color,
 ): LayerBackdrop? {
+    if (!enabled || !isRenderEffectSupported()) return null
     val backdrop = rememberLayerBackdrop {
         drawRect(surfaceColor)
         drawContent()
     }
-    return backdrop.takeIf { enabled && isRenderEffectSupported() }
+    return backdrop
 }
 
 fun Modifier.attachBarBlurBackdrop(backdrop: LayerBackdrop?): Modifier = then(
     if (backdrop != null) Modifier.layerBackdrop(backdrop) else Modifier,
 )
 
+@Composable
 fun Modifier.defaultBarBlur(
     backdrop: LayerBackdrop?,
     surfaceColor: Color,
@@ -42,7 +45,7 @@ fun Modifier.defaultBarBlur(
         Modifier.textureBlur(
             backdrop = backdrop,
             shape = shape,
-            blurRadius = DefaultBarBlurRadius,
+            blurRadius = DefaultBarBlurRadius * LocalDensity.current.density,
             colors = BlurColors(
                 blendColors = listOf(
                     BlendColorEntry(surfaceColor.copy(alpha = DefaultBarBlurTintAlpha)),

@@ -34,6 +34,7 @@ val LocalIsMonetTheme = staticCompositionLocalOf { false }
 fun WeaveMagiskTheme(
     colorMode: Int = 0,
     keyColor: Color? = null,
+    enableSmoothCorner: Boolean = true,
     content: @Composable () -> Unit
 ) {
     val isDark = isSystemInDarkTheme()
@@ -59,6 +60,7 @@ fun WeaveMagiskTheme(
     CompositionLocalProvider(LocalIsMonetTheme provides isMonetTheme) {
         MiuixTheme(
             controller = controller,
+            smoothRounding = enableSmoothCorner,
             content = content
         )
     }
