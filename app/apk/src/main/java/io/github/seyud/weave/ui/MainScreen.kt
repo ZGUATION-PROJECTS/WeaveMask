@@ -633,7 +633,7 @@ private fun MainTabScreen(
         ) {
             HorizontalPager(
                 state = pagerState,
-                beyondViewportPageCount = 1,
+                beyondViewportPageCount = if (contentReady) destinations.size - 1 else 0,
                 userScrollEnabled = true,
                 modifier = Modifier.fillMaxSize(),
             ) { page ->
