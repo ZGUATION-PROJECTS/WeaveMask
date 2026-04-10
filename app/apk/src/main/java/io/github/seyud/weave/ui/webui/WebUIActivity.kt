@@ -19,6 +19,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import io.github.seyud.weave.R
 import io.github.seyud.weave.core.Config
 import io.github.seyud.weave.core.isRunningAsStub
 import io.github.seyud.weave.ui.theme.WeaveMagiskTheme
@@ -42,6 +43,7 @@ class WebUIActivity : ComponentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        setTheme(resolveWebUiTheme(Config.colorMode))
         super.onCreate(savedInstanceState)
 
         setContent {
@@ -58,6 +60,12 @@ class WebUIActivity : ComponentActivity() {
                 MainContent(activity = this, onFinish = { finish() })
             }
         }
+    }
+
+    private fun resolveWebUiTheme(colorMode: Int): Int = when (colorMode) {
+        1, 4 -> R.style.Theme_WeaveMagisk_WebUI_Light
+        2, 5 -> R.style.Theme_WeaveMagisk_WebUI_Dark
+        else -> R.style.Theme_WeaveMagisk_WebUI_System
     }
 }
 

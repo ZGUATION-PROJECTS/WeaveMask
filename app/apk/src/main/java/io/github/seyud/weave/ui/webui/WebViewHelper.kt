@@ -13,7 +13,9 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import androidx.webkit.WebSettingsCompat
 import androidx.webkit.WebViewAssetLoader
+import androidx.webkit.WebViewFeature
 import com.topjohnwu.superuser.nio.FileSystemManager
 import io.github.seyud.weave.core.Const
 import io.github.seyud.weave.core.utils.RootUtils
@@ -98,6 +100,9 @@ private fun initWebView(
         javaScriptEnabled = true
         domStorageEnabled = true
         allowFileAccess = false
+    }
+    if (WebViewFeature.isFeatureSupported(WebViewFeature.ALGORITHMIC_DARKENING)) {
+        WebSettingsCompat.setAlgorithmicDarkeningAllowed(webView.settings, false)
     }
 
     val webRoot = File("$moduleDir/webroot")
