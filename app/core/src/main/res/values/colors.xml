@@ -8,4 +8,8 @@
     <color name="ic_launcher_foreground_stroke">#193CB8</color>
     <color name="ic_launcher_foreground_accent">#00B8DB</color>
     <color name="ic_launcher_foreground_accent_stroke">#005F78</color>
+    <color name="weave_brand_main">#2B7FFF</color>
+    <color name="weave_brand_stroke">#193CB8</color>
+    <color name="weave_brand_accent">#00B8DB</color>
+    <color name="weave_brand_accent_stroke">#005F78</color>
 </resources>

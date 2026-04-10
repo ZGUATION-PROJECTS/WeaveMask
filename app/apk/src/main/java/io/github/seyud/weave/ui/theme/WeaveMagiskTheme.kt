@@ -2,6 +2,7 @@ package io.github.seyud.weave.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import top.yukonga.miuix.kmp.theme.ColorSchemeMode
@@ -11,6 +12,7 @@ import top.yukonga.miuix.kmp.theme.ThemeController
 val LocalEnableBlur = staticCompositionLocalOf { false }
 val LocalEnableFloatingBottomBar = staticCompositionLocalOf { false }
 val LocalEnableFloatingBottomBarBlur = staticCompositionLocalOf { false }
+val LocalIsMonetTheme = staticCompositionLocalOf { false }
 
 /**
  * WeaveMagisk 主题包装函数
@@ -35,6 +37,7 @@ fun WeaveMagiskTheme(
     content: @Composable () -> Unit
 ) {
     val isDark = isSystemInDarkTheme()
+    val isMonetTheme = colorMode in 3..5
     val controller = when (colorMode) {
         1 -> ThemeController(ColorSchemeMode.Light)
         2 -> ThemeController(ColorSchemeMode.Dark)
@@ -53,8 +56,10 @@ fun WeaveMagiskTheme(
         )
         else -> ThemeController(ColorSchemeMode.System)
     }
-    MiuixTheme(
-        controller = controller,
-        content = content
-    )
+    CompositionLocalProvider(LocalIsMonetTheme provides isMonetTheme) {
+        MiuixTheme(
+            controller = controller,
+            content = content
+        )
+    }
 }

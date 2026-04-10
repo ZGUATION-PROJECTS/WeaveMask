@@ -23,12 +23,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.seyud.weave.R
 import io.github.seyud.weave.core.R as CoreR
+import io.github.seyud.weave.ui.theme.LocalIsMonetTheme
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
@@ -97,7 +99,13 @@ internal fun MagiskCard(
     onInstallClick: () -> Unit,
 ) {
     val context = LocalContext.current
+    val isMonetTheme = LocalIsMonetTheme.current
     val isInteractive = magiskState != HomeViewModel.State.LOADING
+    val accentColor = if (isMonetTheme) {
+        MiuixTheme.colorScheme.primary
+    } else {
+        colorResource(id = CoreR.color.weave_brand_main)
+    }
     val actionText = if (magiskState == HomeViewModel.State.OUTDATED) {
         context.getString(CoreR.string.update)
     } else {
@@ -133,6 +141,11 @@ internal fun MagiskCard(
                 Image(
                     painter = painterResource(id = CoreR.drawable.ic_weave_card),
                     contentDescription = null,
+                    colorFilter = if (isMonetTheme) {
+                        ColorFilter.tint(MiuixTheme.colorScheme.primary)
+                    } else {
+                        null
+                    },
                     modifier = Modifier.size(56.dp)
                 )
 
@@ -142,7 +155,7 @@ internal fun MagiskCard(
                     Text(
                         text = "Weave",
                         style = MiuixTheme.textStyles.title3,
-                        color = MiuixTheme.colorScheme.primary,
+                        color = accentColor,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -171,6 +184,7 @@ internal fun MagiskCard(
                             InlineCardActionButton(
                                 icon = actionIcon,
                                 text = actionText,
+                                accentColor = accentColor,
                                 onPressed = onInstallClick
                             )
                             if (isInteractive) {
@@ -198,6 +212,7 @@ internal fun MagiskCard(
 private fun InlineCardActionButton(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     text: String,
+    accentColor: Color,
     onPressed: () -> Unit,
 ) {
     Surface(
@@ -213,13 +228,13 @@ private fun InlineCardActionButton(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = MiuixTheme.colorScheme.primary,
+                tint = accentColor,
                 modifier = Modifier.size(18.dp)
             )
             Spacer(modifier = Modifier.width(4.dp))
             Text(
                 text = text,
-                color = MiuixTheme.colorScheme.primary
+                color = accentColor
             )
         }
     }
@@ -232,6 +247,12 @@ internal fun InstallActionButton(
     onClick: () -> Unit,
 ) {
     val context = LocalContext.current
+    val isMonetTheme = LocalIsMonetTheme.current
+    val weaveAccentColor = if (isMonetTheme) {
+        MiuixTheme.colorScheme.primary
+    } else {
+        colorResource(id = CoreR.color.weave_brand_main)
+    }
     val icon = if (appState == HomeViewModel.State.OUTDATED) MiuixIcons.Update else MiuixIcons.Download
     val text = if (appState == HomeViewModel.State.OUTDATED) {
         context.getString(CoreR.string.update)
@@ -250,10 +271,16 @@ internal fun InstallActionButton(
     }
 
     if (matchUninstallMetrics) {
+        val isWeaveBrandAccent = !isMonetTheme
         val containerColor = if (appState == HomeViewModel.State.OUTDATED) {
-            MiuixTheme.colorScheme.primary
+            if (isWeaveBrandAccent) weaveAccentColor else MiuixTheme.colorScheme.primary
         } else {
-            MiuixTheme.colorScheme.secondaryContainer
+            if (isWeaveBrandAccent) weaveAccentColor.copy(alpha = 0.14f) else MiuixTheme.colorScheme.secondaryContainer
+        }
+        val buttonIconTint = if (isWeaveBrandAccent) {
+            if (appState == HomeViewModel.State.OUTDATED) Color.White else weaveAccentColor
+        } else {
+            iconTint
         }
 
         Surface(
@@ -274,14 +301,14 @@ internal fun InstallActionButton(
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = iconTint,
+                    tint = buttonIconTint,
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
                     text = text,
                     style = MiuixTheme.textStyles.body2,
-                    color = iconTint
+                    color = buttonIconTint
                 )
             }
         }
@@ -514,6 +541,7 @@ internal fun ManagerCard(
                             InlineCardActionButton(
                                 icon = actionIcon,
                                 text = actionLabel,
+                                accentColor = MiuixTheme.colorScheme.primary,
                                 onPressed = onInstallClick
                             )
                             Spacer(modifier = Modifier.width(6.dp))

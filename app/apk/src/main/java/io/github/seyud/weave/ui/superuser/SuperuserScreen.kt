@@ -45,6 +45,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
@@ -376,8 +377,10 @@ private fun EmptyContent(
     ) {
         Text(
             text = context.getString(CoreR.string.superuser_policy_none),
+            modifier = Modifier.padding(horizontal = 16.dp),
             style = MiuixTheme.textStyles.title3,
-            fontWeight = FontWeight.Bold
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
         )
     }
 }
