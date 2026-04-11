@@ -73,6 +73,24 @@ class ModuleViewModel : AsyncLoadViewModel() {
     private var allModules: List<ModuleInfo> = emptyList()
     private var moduleSnapshotVersion = 0
 
+    private fun currentModuleSnapshot(): Map<String, ModuleInfo> = allModules.associateBy { it.id }
+
+    private fun List<ModuleInfo>.retainUpdateStateFrom(
+        previousModules: Map<String, ModuleInfo>,
+    ): List<ModuleInfo> = map { moduleInfo ->
+        moduleInfo.retainUpdateStateFrom(previousModules[moduleInfo.id])
+    }
+
+    private fun ModuleInfo.retainUpdateStateFrom(previous: ModuleInfo?): ModuleInfo {
+        if (previous == null || previous.versionCode != versionCode) {
+            return this
+        }
+        return copy(
+            updateInfo = previous.updateInfo,
+            outdated = previous.outdated,
+        )
+    }
+
     /**
      * 设置搜索查询
      */
@@ -126,6 +144,7 @@ class ModuleViewModel : AsyncLoadViewModel() {
 
     private suspend fun loadModules(isInitialLoad: Boolean) {
         updateInfoJob?.cancel()
+        val previousModules = currentModuleSnapshot()
 
         if (isInitialLoad) {
             loading = true
@@ -143,7 +162,9 @@ class ModuleViewModel : AsyncLoadViewModel() {
             }
             val installed = if (moduleLoaded) {
                 withContext(Dispatchers.Default) {
-                    installedModules.map { ModuleInfo.from(it) }
+                    installedModules
+                        .map { ModuleInfo.from(it) }
+                        .retainUpdateStateFrom(previousModules)
                 }
             } else {
                 emptyList()
@@ -252,6 +273,7 @@ class ModuleViewModel : AsyncLoadViewModel() {
      */
     fun toggleModule(moduleId: String, enabled: Boolean) {
         viewModelScope.launch {
+            val previousModules = currentModuleSnapshot()
             withContext(Dispatchers.IO) {
                 val localModule = LocalModule.installed().find { it.id == moduleId }
                 localModule?.let {
@@ -260,6 +282,7 @@ class ModuleViewModel : AsyncLoadViewModel() {
                     if (index >= 0) {
                         allModules = allModules.toMutableList().apply {
                             this[index] = ModuleInfo.from(it)
+                                .retainUpdateStateFrom(previousModules[moduleId])
                         }
                     }
                 }
@@ -273,6 +296,7 @@ class ModuleViewModel : AsyncLoadViewModel() {
      */
     fun toggleModuleRemove(moduleId: String) {
         viewModelScope.launch {
+            val previousModules = currentModuleSnapshot()
             withContext(Dispatchers.IO) {
                 val localModule = LocalModule.installed().find { it.id == moduleId }
                 localModule?.let {
@@ -281,6 +305,7 @@ class ModuleViewModel : AsyncLoadViewModel() {
                     if (index >= 0) {
                         allModules = allModules.toMutableList().apply {
                             this[index] = ModuleInfo.from(it)
+                                .retainUpdateStateFrom(previousModules[moduleId])
                         }
                     }
                 }
